@@ -9,7 +9,7 @@ import { TeamLogo } from '../../shared/TeamLogo'
 import { TeamPill } from '../../shared/TeamPill'
 import { Announcements } from './Announcements'
 import { Countdown } from './Countdown'
-import { PredictionPoll } from './PredictionPoll'
+import { SlotFavorite } from './SlotFavorite'
 import { LiveScorecard } from './LiveScorecard'
 import { SpartanOfSlot } from './SpartanOfSlot'
 
@@ -145,7 +145,7 @@ export function Home({ data, persist, isAdmin, setTab }) {
               </div>
             </Card>
             <div className="mt-3">
-              <PredictionPoll data={data} slot={upcoming} key={upcoming.id} />
+              <SlotFavorite data={data} slot={upcoming} key={upcoming.id} />
             </div>
           </>
         ) : (
