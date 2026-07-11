@@ -61,7 +61,7 @@ export function LiveScorecard({ data, persist, isAdmin }) {
               title="Live CricHeroes scorecard"
               loading="lazy"
               style={{ width: '100%', height: 420, border: 'none', display: 'block' }}
-              sandbox="allow-scripts allow-same-origin allow-popups"
+              sandbox="allow-scripts allow-same-origin allow-popups allow-forms allow-popups-to-escape-sandbox"
             />
           </div>
           <a href={url} target="_blank" rel="noopener noreferrer" className="text-xs flex items-center gap-1" style={{ color: 'var(--gold)' }}>
