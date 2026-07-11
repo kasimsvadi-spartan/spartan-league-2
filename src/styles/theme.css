@@ -70,7 +70,11 @@ body {
 
 .alert-red { background: rgba(215, 72, 77, 0.2); border: 1px solid var(--red); border-radius: 8px; padding: 8px 12px; }
 
-.modal-overlay { background: rgba(0, 0, 0, 0.72); position: fixed; inset: 0; display: flex; align-items: center; justify-content: center; z-index: 50; padding: 16px; }
+/* No align-items/justify-content here on purpose: callers set those via Tailwind utility
+   classes (e.g. "items-end sm:items-center justify-center") and, since this class is defined
+   after the Tailwind import in this same file, its own alignment rules would always win over
+   theirs at equal specificity regardless of viewport. */
+.modal-overlay { background: rgba(0, 0, 0, 0.72); position: fixed; inset: 0; display: flex; z-index: 50; }
 
 .header-wrap { background: rgba(22, 19, 16, 0.95); border-bottom: 1px solid var(--hair); position: sticky; top: 0; z-index: 10; backdrop-filter: blur(6px); padding: 20px 16px 12px; }
 

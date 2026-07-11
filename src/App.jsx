@@ -35,6 +35,12 @@ export default function App() {
   const [showPin, setShowPin] = useState(false)
   const [pendingImport, setPendingImport] = useState(null)
   const [importErr, setImportErr] = useState('')
+  const [scheduleDraft, setScheduleDraft] = useState(null)
+
+  function goToScheduleWithDraft(draft) {
+    setScheduleDraft(draft)
+    setTab('schedule')
+  }
 
   async function handleImportFile(file) {
     if (!file) return
@@ -71,7 +77,15 @@ export default function App() {
           </div>
         )}
         {importErr && <p className="alert-red text-sm mb-4">{importErr}</p>}
-        <TabComponent data={data} persist={persist} isAdmin={isAdmin} setTab={setTab} />
+        <TabComponent
+          data={data}
+          persist={persist}
+          isAdmin={isAdmin}
+          setTab={setTab}
+          draft={tab === 'schedule' ? scheduleDraft : null}
+          clearDraft={() => setScheduleDraft(null)}
+          onCreateSlot={goToScheduleWithDraft}
+        />
       </main>
 
       {showPin && (

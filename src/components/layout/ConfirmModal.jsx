@@ -2,7 +2,7 @@
 // blocked in a sandboxed iframe, which is exactly the bug this replaces.
 export function ConfirmModal({ title, body, confirmLabel = 'Delete', onConfirm, onCancel }) {
   return (
-    <div className="modal-overlay" onClick={onCancel}>
+    <div className="modal-overlay items-center justify-center p-4" onClick={onCancel}>
       <div className="ember-card w-full max-w-xs" onClick={(e) => e.stopPropagation()}>
         <p className="display text-lg gold-text mb-2">{title}</p>
         <p className="text-sm mb-4" style={{ color: 'var(--muted)' }}>{body}</p>

@@ -15,7 +15,7 @@ export function AdminLoginModal({ onLogin, onCancel }) {
   }
 
   return (
-    <div className="modal-overlay" onClick={onCancel}>
+    <div className="modal-overlay items-center justify-center p-4" onClick={onCancel}>
       <form onSubmit={submit} className="ember-card w-full max-w-xs" onClick={(e) => e.stopPropagation()}>
         <p className="display text-lg gold-text mb-2">Admin Login</p>
         <p className="text-sm mb-3" style={{ color: 'var(--muted)' }}>Enter the league PIN to make changes.</p>
