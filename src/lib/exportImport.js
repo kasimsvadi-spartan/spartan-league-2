@@ -14,7 +14,12 @@ export function exportData(data) {
 
 export async function parseImportFile(file) {
   const text = await file.text()
-  const parsed = JSON.parse(text)
+  let parsed
+  try {
+    parsed = JSON.parse(text)
+  } catch {
+    throw new Error("Couldn't read that file — make sure it's a backup JSON exported from this app.")
+  }
   if (!parsed || !Array.isArray(parsed.teams) || !Array.isArray(parsed.slots)) {
     throw new Error("Couldn't read that file — make sure it's a backup JSON exported from this app.")
   }
