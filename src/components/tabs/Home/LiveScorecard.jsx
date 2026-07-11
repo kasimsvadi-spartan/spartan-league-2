@@ -1,12 +1,7 @@
 import { useState } from 'react'
-import { ExternalLink, Radio } from 'lucide-react'
+import { Radio } from 'lucide-react'
 import { Card } from '../../layout/Card'
 
-// Feasibility note: I could not confirm from this environment how much of a CricHeroes
-// scorecard iframe.cricheroes.in shows to viewers without a CricHeroes login (network access
-// to that domain was blocked in the sandbox this was built in). This embeds whatever the link
-// renders and always shows an "Open in CricHeroes" fallback alongside it, since a login wall or
-// an X-Frame-Options block would otherwise leave someone looking at a blank box with no way out.
 export function LiveScorecard({ data, persist, isAdmin }) {
   const [editing, setEditing] = useState(false)
   const [draft, setDraft] = useState(data.liveScorecardUrl || '')
@@ -29,7 +24,7 @@ export function LiveScorecard({ data, persist, isAdmin }) {
       <div className="flex items-center justify-between mb-2">
         <div className="flex items-center gap-2">
           <Radio size={14} color="var(--gold)" />
-          <p className="text-xs uppercase tracking-wide" style={{ color: 'var(--muted)' }}>Live Scorecard</p>
+          <p className="text-xs uppercase tracking-wide" style={{ color: 'var(--muted)' }}>Live Match</p>
         </div>
         {isAdmin && (
           <button onClick={() => setEditing((e) => !e)} className="text-xs" style={{ color: 'var(--gold)' }}>
@@ -39,7 +34,7 @@ export function LiveScorecard({ data, persist, isAdmin }) {
       </div>
 
       {isAdmin && editing && (
-        <div className="mb-3">
+        <div className="mb-1">
           <input
             value={draft}
             onChange={(e) => setDraft(e.target.value)}
@@ -53,24 +48,17 @@ export function LiveScorecard({ data, persist, isAdmin }) {
         </div>
       )}
 
-      {url ? (
-        <div>
-          <div className="rounded-md overflow-hidden mb-2" style={{ border: '1px solid var(--hair2)', background: 'var(--ink)' }}>
-            <iframe
-              src={url}
-              title="Live CricHeroes scorecard"
-              loading="lazy"
-              style={{ width: '100%', height: 420, border: 'none', display: 'block' }}
-              sandbox="allow-scripts allow-same-origin allow-popups allow-forms allow-popups-to-escape-sandbox"
-            />
-          </div>
-          <a href={url} target="_blank" rel="noopener noreferrer" className="text-xs flex items-center gap-1" style={{ color: 'var(--gold)' }}>
-            <ExternalLink size={12} /> Open in CricHeroes {url.includes('cricheroes') ? '' : '↗'}
-          </a>
-        </div>
-      ) : (
-        isAdmin && !editing && <p className="text-xs" style={{ color: 'var(--muted2)' }}>No live match linked right now.</p>
+      {url && !editing && (
+        <a
+          href={url}
+          target="_blank"
+          rel="noopener noreferrer"
+          className="gold-btn w-full py-2.5 rounded-md text-sm flex items-center justify-center gap-2"
+        >
+          <Radio size={14} /> Follow live on CricHeroes
+        </a>
       )}
+      {!url && isAdmin && !editing && <p className="text-xs" style={{ color: 'var(--muted2)' }}>No live match linked right now.</p>}
     </Card>
   )
 }

@@ -11,6 +11,7 @@ import { Announcements } from './Announcements'
 import { Countdown } from './Countdown'
 import { PredictionPoll } from './PredictionPoll'
 import { LiveScorecard } from './LiveScorecard'
+import { SpartanOfSlot } from './SpartanOfSlot'
 
 export function Home({ data, persist, isAdmin, setTab }) {
   const table = computePointsTable(data)
@@ -36,6 +37,8 @@ export function Home({ data, persist, isAdmin, setTab }) {
       <Announcements data={data} persist={persist} isAdmin={isAdmin} />
 
       <LiveScorecard data={data} persist={persist} isAdmin={isAdmin} />
+
+      <SpartanOfSlot data={data} />
 
       {champion && (
         <Card className="text-center py-6" style={{ borderColor: 'var(--gold)' }}>
