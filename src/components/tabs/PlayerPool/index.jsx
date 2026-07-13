@@ -14,6 +14,7 @@ export function PlayerPool({ data, persist, isAdmin }) {
   const [newName, setNewName] = useState('')
   const [newRole, setNewRole] = useState('Batter')
   const [newBasePrice, setNewBasePrice] = useState('')
+  const [newPhotoUrl, setNewPhotoUrl] = useState('')
   const [editingId, setEditingId] = useState(null)
   const [query, setQuery] = useState('')
   const [uploadingId, setUploadingId] = useState(null)
@@ -26,10 +27,21 @@ export function PlayerPool({ data, persist, isAdmin }) {
       name: newName.trim(),
       role: newRole,
       basePrice: newBasePrice === '' ? null : Number(newBasePrice),
-      photoUrl: '',
+      photoUrl: newPhotoUrl,
     }
     persist({ ...data, playerPool: [...pool, player] })
-    setNewName(''); setNewBasePrice(''); setNewRole('Batter')
+    setNewName(''); setNewBasePrice(''); setNewRole('Batter'); setNewPhotoUrl('')
+  }
+  async function handleNewPhotoUpload(file) {
+    if (!file) return
+    setUploadErr('')
+    setUploadingId('new')
+    try {
+      setNewPhotoUrl(await uploadPhoto(file, 'players'))
+    } catch {
+      setUploadErr("Couldn't process that photo — try a different image.")
+    }
+    setUploadingId(null)
   }
   function updatePlayer(id, patch) {
     persist({ ...data, playerPool: pool.map((p) => (p.id === id ? { ...p, ...patch } : p)) })
@@ -72,10 +84,18 @@ export function PlayerPool({ data, persist, isAdmin }) {
               {ROLES.map((r) => <option key={r}>{r}</option>)}
             </select>
           </div>
-          <div className="flex gap-2">
+          <div className="flex gap-2 mb-2">
             <input inputMode="numeric" placeholder="Base price (optional)" value={newBasePrice} onChange={(e) => setNewBasePrice(e.target.value)} className="field flex-1 px-2.5 py-1.5 text-sm" />
-            <button onClick={addPlayer} className="gold-btn rounded px-2.5"><Plus size={16} /></button>
           </div>
+          <div className="flex items-center gap-2">
+            <PlayerAvatar player={{ name: newName, photoUrl: newPhotoUrl }} size={32} />
+            <label className="plain-btn text-xs px-2.5 py-1.5 rounded-md flex-1 text-center" style={{ cursor: 'pointer' }}>
+              {uploadingId === 'new' ? 'Uploading…' : newPhotoUrl ? 'Change photo' : 'Add photo (optional)'}
+              <input type="file" accept="image/*" style={{ display: 'none' }} onChange={(e) => handleNewPhotoUpload(e.target.files[0])} />
+            </label>
+            <button onClick={addPlayer} className="gold-btn rounded px-2.5 py-1.5"><Plus size={16} /></button>
+          </div>
+          {uploadErr && uploadingId === null && <p className="text-[10px] mt-1" style={{ color: 'var(--red)' }}>{uploadErr}</p>}
         </Card>
       )}
 
