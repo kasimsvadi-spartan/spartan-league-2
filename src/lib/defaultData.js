@@ -18,5 +18,6 @@ export function defaultData() {
     manualRecords: { highestScore: null, bestBowling: null },
     polls: {},
     liveScorecardUrl: '',
+    playerPool: [],
   }
 }

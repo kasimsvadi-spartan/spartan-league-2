@@ -16,6 +16,7 @@ import { Results } from './components/tabs/Results'
 import { Leaders } from './components/tabs/Leaders'
 import { Records } from './components/tabs/Records'
 import { Teams } from './components/tabs/Teams'
+import { PlayerPool } from './components/tabs/PlayerPool'
 
 const TAB_COMPONENTS = {
   home: Home,
@@ -26,6 +27,7 @@ const TAB_COMPONENTS = {
   leaders: Leaders,
   records: Records,
   teams: Teams,
+  pool: PlayerPool,
 }
 
 export default function App() {
@@ -70,7 +72,7 @@ export default function App() {
       <main className="p-4 max-w-2xl mx-auto">
         {isAdmin && data.teams.length === 0 && (
           <div className="ember-card mb-4 flex items-center justify-between gap-3">
-            <p className="text-sm" style={{ color: 'var(--muted)' }}>No teams yet — load the 6 Spartan League teams to get started.</p>
+            <p className="text-sm" style={{ color: 'var(--muted)' }}>No teams yet — load the {defaultData().teams.length} Spartan League teams to get started.</p>
             <button className="gold-btn text-sm whitespace-nowrap" onClick={() => persist({ ...defaultData(), ...data, teams: defaultData().teams })}>
               Load default teams
             </button>
