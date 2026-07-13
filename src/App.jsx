@@ -18,6 +18,7 @@ import { Records } from './components/tabs/Records'
 import { Teams } from './components/tabs/Teams'
 import { PlayerPool } from './components/tabs/PlayerPool'
 import { Auction } from './components/tabs/Auction'
+import { Owners } from './components/tabs/Owners'
 
 const TAB_COMPONENTS = {
   home: Home,
@@ -30,6 +31,7 @@ const TAB_COMPONENTS = {
   teams: Teams,
   pool: PlayerPool,
   auction: Auction,
+  owners: Owners,
 }
 
 export default function App() {
