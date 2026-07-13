@@ -15,7 +15,7 @@ export function Header({ data, isAdmin, onAdminClick, onImportFile }) {
           />
           <div>
             <h1 className="display gold-text" style={{ fontSize: 48, lineHeight: 1 }}>SPARTAN LEAGUE 2</h1>
-            <p className="text-[10px] uppercase tracking-[0.25em] mt-1" style={{ color: 'var(--muted)' }}>Season 1 · 22 Slots · 6 Teams</p>
+            <p className="text-[10px] uppercase tracking-[0.25em] mt-1" style={{ color: 'var(--muted)' }}>Season 2 · 22 Slots · {data.teams.length} Team{data.teams.length === 1 ? '' : 's'}</p>
           </div>
         </div>
         <div className="flex items-center gap-2">

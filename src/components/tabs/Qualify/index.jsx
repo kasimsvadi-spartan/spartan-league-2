@@ -59,7 +59,7 @@ export function Qualify({ data, isAdmin, onCreateSlot }) {
         </div>
       )}
 
-      {!leagueDone && table.length === 6 && (
+      {!leagueDone && table.length >= 5 && (
         <div className="mb-4">
           <SectionTitle icon={Award}>Qualification Targets</SectionTitle>
           <div className="space-y-2">

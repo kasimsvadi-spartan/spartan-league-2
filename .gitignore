@@ -13,6 +13,9 @@ dist-ssr
 *.local
 .env
 
+# Local season-data backups (contain real player names/photos - not for version control)
+backups/
+
 # Editor directories and files
 .vscode/*
 !.vscode/extensions.json
