@@ -12,6 +12,7 @@ import { Countdown } from './Countdown'
 import { SlotFavorite } from './SlotFavorite'
 import { LiveScorecard } from './LiveScorecard'
 import { SpartanOfSlot } from './SpartanOfSlot'
+import { LeaderBackground } from './LeaderBackground'
 
 export function Home({ data, persist, isAdmin, setTab }) {
   const table = computePointsTable(data)
@@ -34,6 +35,8 @@ export function Home({ data, persist, isAdmin, setTab }) {
 
   return (
     <div className="space-y-4">
+      {leader && leader.total > 0 && <LeaderBackground team={leader.team} />}
+
       <Announcements data={data} persist={persist} isAdmin={isAdmin} />
 
       <LiveScorecard data={data} persist={persist} isAdmin={isAdmin} />
