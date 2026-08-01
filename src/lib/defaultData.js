@@ -11,6 +11,7 @@ export function defaultData() {
       { id: uid('team'), name: 'White Caps', color: '#2FA84F', logo: '/team-logos/white-caps.png', captain: '', owner: '', players: [] },
       { id: uid('team'), name: 'Desi Boyz', color: '#F0A83C', logo: '/team-logos/desi-boyz.png', captain: '', owner: '', players: [] },
       { id: uid('team'), name: 'MMT Rangers', color: '#1E9E97', logo: '/team-logos/mmt-rangers.png', captain: '', owner: '', players: [] },
+      { id: uid('team'), name: 'Maniacs', color: '#C41E3A', logo: '/team-logos/maniacs.jpg', captain: '', owner: 'Abhishek Doshi', players: [] },
     ],
     slots: [],
     statsImports: [],

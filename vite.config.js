@@ -29,7 +29,7 @@ export default defineConfig({
       },
       workbox: {
         // App shell + static assets: cache-first via Workbox precache (default for globPatterns).
-        globPatterns: ['**/*.{js,css,html,png,ico,svg,woff2}'],
+        globPatterns: ['**/*.{js,css,html,png,jpg,jpeg,ico,svg,woff2}'],
         runtimeCaching: [
           {
             // Season data + storage reads: show last-known data instantly, refresh in background.
