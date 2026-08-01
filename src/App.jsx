@@ -17,7 +17,6 @@ import { Leaders } from './components/tabs/Leaders'
 import { Records } from './components/tabs/Records'
 import { Teams } from './components/tabs/Teams'
 import { PlayerPool } from './components/tabs/PlayerPool'
-import { Auction } from './components/tabs/Auction'
 import { Owners } from './components/tabs/Owners'
 
 const TAB_COMPONENTS = {
@@ -30,7 +29,6 @@ const TAB_COMPONENTS = {
   records: Records,
   teams: Teams,
   pool: PlayerPool,
-  auction: Auction,
   owners: Owners,
 }
 

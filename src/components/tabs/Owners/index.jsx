@@ -1,6 +1,5 @@
 import { useState } from 'react'
 import { Crown } from 'lucide-react'
-import { teamSpendTotals } from '../../../lib/auction'
 import { uploadPhoto } from '../../../lib/photo'
 import { Card } from '../../layout/Card'
 import { SectionTitle } from '../../layout/SectionTitle'
@@ -10,7 +9,6 @@ import { PlayerAvatar } from '../../shared/PlayerAvatar'
 export function Owners({ data, persist, isAdmin }) {
   const [uploadingId, setUploadingId] = useState(null)
   const [uploadErr, setUploadErr] = useState('')
-  const totals = teamSpendTotals(data)
 
   function updateTeam(id, patch) {
     persist({ ...data, teams: data.teams.map((t) => (t.id === id ? { ...t, ...patch } : t)) })
@@ -33,7 +31,6 @@ export function Owners({ data, persist, isAdmin }) {
       <SectionTitle icon={Crown}>Owners</SectionTitle>
       <div className="space-y-2">
         {data.teams.map((team) => {
-          const spend = totals.find((t) => t.team.id === team.id)
           return (
             <Card key={team.id}>
               <div className="flex items-center gap-3">
@@ -52,9 +49,6 @@ export function Owners({ data, persist, isAdmin }) {
                     />
                   ) : (
                     <p className="display text-lg">{team.owner || '—'}</p>
-                  )}
-                  {spend && spend.count > 0 && (
-                    <p className="text-[11px] mt-1" style={{ color: 'var(--muted2)' }}>{spend.count} player{spend.count === 1 ? '' : 's'} bought · ₹{spend.spent} spent</p>
                   )}
                 </div>
               </div>

@@ -68,7 +68,7 @@ export function PlayerPool({ data, persist, isAdmin }) {
   return (
     <div>
       <SectionTitle icon={BookUser}>Player Pool</SectionTitle>
-      <p className="text-[11px] mb-3" style={{ color: 'var(--muted2)' }}>Every player registered for Season 2, independent of team. Team assignment happens through the Auction tab.</p>
+      <p className="text-[11px] mb-3" style={{ color: 'var(--muted2)' }}>Every player registered for Season 2, independent of team. Add players to a team's squad from the Squads tab.</p>
 
       <div className="relative mb-3">
         <Search size={14} color="var(--muted)" style={{ position: 'absolute', left: 10, top: 10 }} />
