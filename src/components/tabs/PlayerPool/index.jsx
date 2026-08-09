@@ -2,10 +2,12 @@ import { useState } from 'react'
 import { BookUser, Pencil, Plus, Search, X } from 'lucide-react'
 import { uid } from '../../../lib/uid'
 import { uploadPhoto } from '../../../lib/photo'
+import { assignToTeam, canAssignToTeam, unassignFromTeam } from '../../../lib/roster'
 import { Card } from '../../layout/Card'
 import { SectionTitle } from '../../layout/SectionTitle'
 import { Empty } from '../../layout/Empty'
 import { PlayerAvatar } from '../../shared/PlayerAvatar'
+import { TeamPill } from '../../shared/TeamPill'
 
 const ROLES = ['Batter', 'Bowler', 'All-rounder', 'Wicketkeeper']
 
@@ -16,6 +18,9 @@ export function PlayerPool({ data, persist, isAdmin }) {
   const [newBasePrice, setNewBasePrice] = useState('')
   const [newPhotoUrl, setNewPhotoUrl] = useState('')
   const [editingId, setEditingId] = useState(null)
+  const [assigningId, setAssigningId] = useState(null)
+  const [assignTeamId, setAssignTeamId] = useState('')
+  const [assignErr, setAssignErr] = useState('')
   const [query, setQuery] = useState('')
   const [uploadingId, setUploadingId] = useState(null)
   const [uploadErr, setUploadErr] = useState('')
@@ -49,6 +54,17 @@ export function PlayerPool({ data, persist, isAdmin }) {
   function removePlayer(id) {
     persist({ ...data, playerPool: pool.filter((p) => p.id !== id) })
   }
+  function confirmAssign(id) {
+    if (!assignTeamId) { setAssignErr('Pick a team.'); return }
+    if (!canAssignToTeam(data, assignTeamId)) { setAssignErr('That team already has 9 players.'); return }
+    setAssignErr('')
+    persist(assignToTeam(data, id, assignTeamId))
+    setAssigningId(null)
+    setAssignTeamId('')
+  }
+  function handleUnassign(id) {
+    persist(unassignFromTeam(data, id))
+  }
   async function handlePhotoUpload(id, file) {
     if (!file) return
     setUploadErr('')
@@ -68,7 +84,7 @@ export function PlayerPool({ data, persist, isAdmin }) {
   return (
     <div>
       <SectionTitle icon={BookUser}>Player Pool</SectionTitle>
-      <p className="text-[11px] mb-3" style={{ color: 'var(--muted2)' }}>Every player registered for Season 2, independent of team. Add players to a team's squad from the Squads tab.</p>
+      <p className="text-[11px] mb-3" style={{ color: 'var(--muted2)' }}>Every player registered for Season 2. Assign a player to a team below to add them to that team's squad.</p>
 
       <div className="relative mb-3">
         <Search size={14} color="var(--muted)" style={{ position: 'absolute', left: 10, top: 10 }} />
@@ -108,14 +124,17 @@ export function PlayerPool({ data, persist, isAdmin }) {
         <div className="space-y-1.5">
           {filtered.map((p) => {
             const isEditing = editingId === p.id
+            const isAssigning = assigningId === p.id
+            const assignedTeam = p.assignedTeamId ? data.teams.find((t) => t.id === p.assignedTeamId) : null
             return (
               <Card key={p.id}>
                 <div className="flex items-center justify-between">
                   <div className="flex items-center gap-2.5">
-                    <PlayerAvatar player={p} size={36} />
+                    <PlayerAvatar player={p} team={assignedTeam} size={36} />
                     <div>
                       <p className="text-sm font-medium">{p.name}</p>
                       <p className="text-[11px]" style={{ color: 'var(--muted2)' }}>{p.role}{p.basePrice ? ` · Base ₹${p.basePrice}` : ''}</p>
+                      {assignedTeam && <div className="mt-1"><TeamPill team={assignedTeam} /></div>}
                     </div>
                   </div>
                   {isAdmin && (
@@ -125,6 +144,28 @@ export function PlayerPool({ data, persist, isAdmin }) {
                     </div>
                   )}
                 </div>
+                {isAdmin && (
+                  <div className="mt-2.5 pt-2.5" style={{ borderTop: '1px solid var(--hair3)' }}>
+                    {assignedTeam ? (
+                      <button onClick={() => handleUnassign(p.id)} className="text-[11px]" style={{ color: 'var(--red)' }}>Unassign from {assignedTeam.name}</button>
+                    ) : isAssigning ? (
+                      <div className="flex gap-2 items-start">
+                        <select value={assignTeamId} onChange={(e) => setAssignTeamId(e.target.value)} className="field flex-1 px-2 py-1.5 text-sm">
+                          <option value="">Select team…</option>
+                          {data.teams.map((t) => {
+                            const full = !canAssignToTeam(data, t.id)
+                            return <option key={t.id} value={t.id} disabled={full}>{t.name}{full ? ' (Full)' : ''}</option>
+                          })}
+                        </select>
+                        <button onClick={() => confirmAssign(p.id)} className="gold-btn text-xs px-2.5 py-1.5 rounded-md">Confirm</button>
+                        <button onClick={() => { setAssigningId(null); setAssignErr('') }} className="plain-btn text-xs px-2.5 py-1.5 rounded-md">Cancel</button>
+                      </div>
+                    ) : (
+                      <button onClick={() => { setAssigningId(p.id); setAssignTeamId(''); setAssignErr('') }} className="text-[11px]" style={{ color: 'var(--gold)' }}>Assign to a team</button>
+                    )}
+                    {isAssigning && assignErr && <p className="text-[10px] mt-1" style={{ color: 'var(--red)' }}>{assignErr}</p>}
+                  </div>
+                )}
                 {isEditing && (
                   <div className="mt-2.5 pt-2.5 space-y-1.5" style={{ borderTop: '1px solid var(--hair3)' }}>
                     <div>
