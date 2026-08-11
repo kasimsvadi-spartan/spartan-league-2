@@ -1,4 +1,4 @@
-import { Award, BarChart3, BookUser, CalendarDays, Crown, History, Home as HomeIcon, ListOrdered, Medal, Trophy, Users } from 'lucide-react'
+import { Award, BarChart3, BookUser, CalendarDays, Crown, History, Home as HomeIcon, ListOrdered, Medal, ScrollText, Trophy, Users } from 'lucide-react'
 
 export const TABS = [
   { id: 'home', label: 'Home', icon: HomeIcon },
@@ -12,6 +12,7 @@ export const TABS = [
   { id: 'pool', label: 'Player Pool', icon: BookUser },
   { id: 'owners', label: 'Owners', icon: Crown },
   { id: 'archive', label: 'Season 1', icon: History },
+  { id: 'rules', label: 'Rules', icon: ScrollText },
 ]
 
 export function TabNav({ tab, setTab }) {

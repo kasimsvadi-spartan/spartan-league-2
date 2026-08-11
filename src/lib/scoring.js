@@ -11,8 +11,10 @@ export const MATCH_LABELS = {
 }
 export const MATCH_ORDER = ['league1', 'league2', 'league3', 'qualifier1', 'eliminator', 'final']
 
-export const LEAGUE_SLOTS_TOTAL = 20
-export const TEAM_LEAGUE_SLOTS = 10 // each team plays 10 of the 20 league slots
+export const LEAGUE_SLOTS_TOTAL = 21
+export const TEAM_LEAGUE_SLOTS = 9 // each team plays 9 of the 21 league slots
+export const KNOCKOUT_SLOTS_TOTAL = 2 // Semi-Final + Grand Final
+export const TOTAL_SLOTS = LEAGUE_SLOTS_TOTAL + KNOCKOUT_SLOTS_TOTAL
 
 export function marginBonusPts(m) {
   if (m >= 60) return 2
