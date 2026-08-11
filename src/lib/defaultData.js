@@ -12,6 +12,7 @@ export function defaultData() {
       { id: uid('team'), name: 'Desi Boyz', color: '#F0A83C', logo: '/team-logos/desi-boyz.png', captain: '', owner: '', players: [] },
       { id: uid('team'), name: 'MMT Rangers', color: '#1E9E97', logo: '/team-logos/mmt-rangers.png', captain: '', owner: '', players: [] },
       { id: uid('team'), name: 'Maniacs', color: '#C41E3A', logo: '/team-logos/maniacs.jpg', captain: '', owner: 'Abhishek Doshi', players: [] },
+      { id: uid('team'), name: 'Kingslayers', color: '#B8860B', logo: '/team-logos/kingslayers.webp', captain: '', owner: 'Kasim Vadiwala', players: [] },
     ],
     slots: [],
     statsImports: [],
