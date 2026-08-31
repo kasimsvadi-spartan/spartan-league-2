@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { lazy, Suspense, useState } from 'react'
 import { Loader2 } from 'lucide-react'
 import { useSeasonData } from './hooks/useSeasonData'
 import { useAdmin } from './hooks/useAdmin'
@@ -9,17 +9,23 @@ import { AdminLoginModal } from './components/admin/AdminLoginModal'
 import { defaultData } from './lib/defaultData'
 import { parseImportFile } from './lib/exportImport'
 import { Home } from './components/tabs/Home'
-import { PointsTable } from './components/tabs/PointsTable'
-import { Qualify } from './components/tabs/Qualify'
-import { Schedule } from './components/tabs/Schedule'
-import { Results } from './components/tabs/Results'
-import { Leaders } from './components/tabs/Leaders'
-import { Records } from './components/tabs/Records'
-import { Teams } from './components/tabs/Teams'
-import { PlayerPool } from './components/tabs/PlayerPool'
-import { Owners } from './components/tabs/Owners'
-import { SeasonArchive } from './components/tabs/SeasonArchive'
-import { Rules } from './components/tabs/Rules'
+
+// Home loads eagerly (it's what every visitor sees first). Every other tab is code-split -
+// its JS, and any heavy library it alone depends on (recharts for Points, papaparse for
+// Leaders' CSV import), only downloads the first time that tab is actually opened, instead
+// of bloating the initial bundle everyone pays for on first load regardless of which tabs
+// they ever visit.
+const PointsTable = lazy(() => import('./components/tabs/PointsTable').then((m) => ({ default: m.PointsTable })))
+const Qualify = lazy(() => import('./components/tabs/Qualify').then((m) => ({ default: m.Qualify })))
+const Schedule = lazy(() => import('./components/tabs/Schedule').then((m) => ({ default: m.Schedule })))
+const Results = lazy(() => import('./components/tabs/Results').then((m) => ({ default: m.Results })))
+const Leaders = lazy(() => import('./components/tabs/Leaders').then((m) => ({ default: m.Leaders })))
+const Records = lazy(() => import('./components/tabs/Records').then((m) => ({ default: m.Records })))
+const Teams = lazy(() => import('./components/tabs/Teams').then((m) => ({ default: m.Teams })))
+const PlayerPool = lazy(() => import('./components/tabs/PlayerPool').then((m) => ({ default: m.PlayerPool })))
+const Owners = lazy(() => import('./components/tabs/Owners').then((m) => ({ default: m.Owners })))
+const SeasonArchive = lazy(() => import('./components/tabs/SeasonArchive').then((m) => ({ default: m.SeasonArchive })))
+const Rules = lazy(() => import('./components/tabs/Rules').then((m) => ({ default: m.Rules })))
 
 const TAB_COMPONENTS = {
   home: Home,
@@ -85,15 +91,17 @@ export default function App() {
           </div>
         )}
         {importErr && <p className="alert-red text-sm mb-4">{importErr}</p>}
-        <TabComponent
-          data={data}
-          persist={persist}
-          isAdmin={isAdmin}
-          setTab={setTab}
-          draft={tab === 'schedule' ? scheduleDraft : null}
-          clearDraft={() => setScheduleDraft(null)}
-          onCreateSlot={goToScheduleWithDraft}
-        />
+        <Suspense fallback={<div className="flex justify-center py-10"><Loader2 className="animate-spin" size={20} color="var(--muted)" /></div>}>
+          <TabComponent
+            data={data}
+            persist={persist}
+            isAdmin={isAdmin}
+            setTab={setTab}
+            draft={tab === 'schedule' ? scheduleDraft : null}
+            clearDraft={() => setScheduleDraft(null)}
+            onCreateSlot={goToScheduleWithDraft}
+          />
+        </Suspense>
       </main>
 
       {showPin && (
