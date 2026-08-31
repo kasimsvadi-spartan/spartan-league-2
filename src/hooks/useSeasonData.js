@@ -21,11 +21,16 @@ export function useSeasonData() {
   const [saveError, setSaveError] = useState(false)
   const suppressRemoteUntil = useRef(0)
 
+  const fetchNow = useCallback(async () => {
+    const { data: row, error } = await supabase.from('season').select('data').eq('id', 1).single()
+    if (!error && row) setData(row.data)
+    return !error
+  }, [])
+
   useEffect(() => {
     let channel
     ;(async () => {
-      const { data: row, error } = await supabase.from('season').select('data').eq('id', 1).single()
-      if (!error && row) setData(row.data)
+      await fetchNow()
       setLoading(false)
 
       channel = supabase
@@ -36,8 +41,22 @@ export function useSeasonData() {
         })
         .subscribe()
     })()
-    return () => { if (channel) supabase.removeChannel(channel) }
-  }, [])
+
+    // Realtime can silently stop delivering updates — a phone locking/backgrounding the tab
+    // is the big one, since mobile browsers routinely suspend WebSockets in the background
+    // without the app ever finding out the connection died. Re-fetching whenever the tab
+    // becomes visible again catches everything that happened while it was away, without
+    // requiring anyone to know to hit refresh.
+    function onVisible() {
+      if (document.visibilityState === 'visible') fetchNow()
+    }
+    document.addEventListener('visibilitychange', onVisible)
+
+    return () => {
+      if (channel) supabase.removeChannel(channel)
+      document.removeEventListener('visibilitychange', onVisible)
+    }
+  }, [fetchNow])
 
   const persist = useCallback(async (next) => {
     setData(next)
@@ -47,5 +66,5 @@ export function useSeasonData() {
     return !error
   }, [])
 
-  return { data, loading, saveError, persist }
+  return { data, loading, saveError, persist, refetch: fetchNow }
 }

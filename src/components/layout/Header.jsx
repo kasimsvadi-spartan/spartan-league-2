@@ -1,9 +1,21 @@
-import { Download, Lock, Unlock, UploadCloud } from 'lucide-react'
+import { useState } from 'react'
+import { Download, Lock, RefreshCw, Unlock, UploadCloud } from 'lucide-react'
 import logoMain from '../../assets/logos/spartan-league-main.png'
 import { exportData } from '../../lib/exportImport'
 import { TOTAL_SLOTS } from '../../lib/scoring'
 
 export function Header({ data, isAdmin, onAdminClick, onImportFile }) {
+  const [refreshing, setRefreshing] = useState(false)
+
+  // A full reload rather than a soft re-fetch on purpose: it guarantees both the freshest
+  // data AND the latest deployed app version in one tap (a stuck PWA service-worker cache
+  // is the other common cause of "I don't see what the admin just added"), which is the
+  // simplest thing to tell a non-technical viewer to reach for when something looks stale.
+  function handleRefresh() {
+    setRefreshing(true)
+    window.location.reload()
+  }
+
   return (
     <header className="header-wrap">
       <div className="flex items-center justify-between">
@@ -20,6 +32,9 @@ export function Header({ data, isAdmin, onAdminClick, onImportFile }) {
           </div>
         </div>
         <div className="flex items-center gap-2">
+          <button onClick={handleRefresh} className="p-2 rounded-full" style={{ border: '1px solid var(--hair2)', color: 'var(--muted)' }} title="Refresh — see the latest data">
+            <RefreshCw size={16} className={refreshing ? 'animate-spin' : ''} />
+          </button>
           {isAdmin && (
             <>
               <button onClick={() => exportData(data)} className="p-2 rounded-full" style={{ border: '1px solid var(--hair2)', color: 'var(--muted)' }} title="Export season data">
