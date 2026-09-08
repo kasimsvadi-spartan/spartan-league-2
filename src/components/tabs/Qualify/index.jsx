@@ -1,5 +1,6 @@
 import { Award, Trophy } from 'lucide-react'
 import { computeLeagueStandings, TEAM_LEAGUE_SLOTS } from '../../../lib/scoring'
+import { assignTeamsToSlot } from '../../../lib/slotAssign'
 import { Card } from '../../layout/Card'
 import { SectionTitle } from '../../layout/SectionTitle'
 import { Empty } from '../../layout/Empty'
@@ -13,14 +14,24 @@ const ZONE_STYLE = {
 }
 const zoneFor = (i) => (i < 2 ? 'final' : i < 5 ? 'semi' : 'out')
 
-export function Qualify({ data, isAdmin, onCreateSlot }) {
+export function Qualify({ data, persist, isAdmin, onCreateSlot }) {
   const { table, completed, total } = computeLeagueStandings(data)
   const leagueDone = completed >= total
   const semiSlot = data.slots.find((s) => s.slotType === 'Semi-Final')
   const finalSlot = data.slots.find((s) => s.slotType === 'Final')
+  const semiReady = semiSlot && semiSlot.teamIds.length === 3
+  const finalReady = finalSlot && finalSlot.teamIds.length === 3
   const semiFinalMatch = semiSlot && semiSlot.matches.find((m) => m.type === 'final')
   const semiWinnerId = semiFinalMatch && semiFinalMatch.result ? semiFinalMatch.result.winner : null
   const semiWinner = semiWinnerId ? data.teams.find((t) => t.id === semiWinnerId) : null
+
+  // If a knockout slot was already scheduled (a date-only shell created ahead of qualification
+  // being known), fill its teams in directly instead of creating a second, duplicate slot.
+  // Only falls back to the old create-a-new-slot flow when no shell exists at all.
+  function resolveOrCreateSlot(existingSlot, teamIds, slotType) {
+    if (existingSlot) persist(assignTeamsToSlot(data, existingSlot.id, teamIds))
+    else onCreateSlot({ teamIds, slotType })
+  }
 
   return (
     <div>
@@ -104,27 +115,35 @@ export function Qualify({ data, isAdmin, onCreateSlot }) {
         </div>
       )}
 
-      {leagueDone && !semiSlot && (
+      {leagueDone && !semiReady && (
         <Card className="mb-4 text-center">
           <p className="text-sm font-semibold mb-1">League stage complete</p>
           <p className="text-xs mb-3" style={{ color: 'var(--muted)' }}>3rd, 4th and 5th place play the Semi-Final slot. The winner joins {table[0].team.name} and {table[1].team.name} in the Grand Final.</p>
-          {isAdmin && <button onClick={() => onCreateSlot({ teamIds: [table[2].team.id, table[3].team.id, table[4].team.id], slotType: 'Semi-Final' })} className="gold-btn w-full py-2 rounded-md text-sm">Create Semi-Final slot</button>}
+          {isAdmin && (
+            <button onClick={() => resolveOrCreateSlot(semiSlot, [table[2].team.id, table[3].team.id, table[4].team.id], 'Semi-Final')} className="gold-btn w-full py-2 rounded-md text-sm">
+              {semiSlot ? 'Assign teams to Semi-Final slot' : 'Create Semi-Final slot'}
+            </button>
+          )}
         </Card>
       )}
 
-      {semiSlot && !semiWinner && (
+      {semiReady && !semiWinner && (
         <Empty title="Semi-Final in progress" body="Waiting on results from the Semi-Final slot in Schedule." />
       )}
 
-      {semiWinner && !finalSlot && (
+      {semiWinner && !finalReady && (
         <Card className="mb-4 text-center">
           <p className="text-sm font-semibold mb-1">Semi-Final complete</p>
           <div className="flex items-center justify-center gap-2 mb-3"><TeamPill team={semiWinner} /> <span className="text-xs" style={{ color: 'var(--muted)' }}>advance to the Grand Final</span></div>
-          {isAdmin && <button onClick={() => onCreateSlot({ teamIds: [table[0].team.id, table[1].team.id, semiWinner.id], slotType: 'Final' })} className="gold-btn w-full py-2 rounded-md text-sm">Create Grand Final slot</button>}
+          {isAdmin && (
+            <button onClick={() => resolveOrCreateSlot(finalSlot, [table[0].team.id, table[1].team.id, semiWinner.id], 'Final')} className="gold-btn w-full py-2 rounded-md text-sm">
+              {finalSlot ? 'Assign teams to Grand Final slot' : 'Create Grand Final slot'}
+            </button>
+          )}
         </Card>
       )}
 
-      {finalSlot && (() => {
+      {finalReady && (() => {
         const finalMatch = finalSlot.matches.find((m) => m.type === 'final')
         const champion = finalMatch && finalMatch.result ? data.teams.find((t) => t.id === finalMatch.result.winner) : null
         return champion ? (
