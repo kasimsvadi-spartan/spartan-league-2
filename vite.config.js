@@ -32,11 +32,14 @@ export default defineConfig({
         globPatterns: ['**/*.{js,css,html,png,jpg,jpeg,webp,ico,svg,woff2}'],
         runtimeCaching: [
           {
-            // Season data + storage reads: show last-known data instantly, refresh in background.
+            // Season data + storage reads: always prefer a fresh network response so the
+            // app never shows stale data when online; fall back to the last-known cached
+            // response only if the network is slow or unavailable (offline resilience).
             urlPattern: ({ url }) => url.hostname.endsWith('.supabase.co'),
-            handler: 'StaleWhileRevalidate',
+            handler: 'NetworkFirst',
             options: {
               cacheName: 'supabase-data',
+              networkTimeoutSeconds: 5,
               expiration: { maxEntries: 50, maxAgeSeconds: 60 * 60 * 24 * 7 },
               cacheableResponse: { statuses: [0, 200] },
             },
