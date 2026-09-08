@@ -26,6 +26,7 @@ export function Schedule({ data, persist, isAdmin, draft, clearDraft }) {
   const [showBlockForm, setShowBlockForm] = useState(false)
   const [blockDate, setBlockDate] = useState('')
   const [blockReason, setBlockReason] = useState('')
+  const [filterTeamId, setFilterTeamId] = useState('')
   const teamById = (id) => data.teams.find((t) => t.id === id)
   const blockedDates = data.blockedDates || []
 
@@ -88,6 +89,14 @@ export function Schedule({ data, persist, isAdmin, draft, clearDraft }) {
         )}
       </div>
 
+      <div className="mb-4">
+        <label className="text-xs uppercase tracking-wide" style={{ color: 'var(--muted)' }}>My team</label>
+        <select value={filterTeamId} onChange={(e) => setFilterTeamId(e.target.value)} className="field w-full mt-1 px-3 py-2 text-sm">
+          <option value="">All teams</option>
+          {data.teams.map((t) => <option key={t.id} value={t.id}>{t.name}</option>)}
+        </select>
+      </div>
+
       {isAdmin && showBlockForm && (
         <Card className="mb-4">
           <label className="text-xs uppercase tracking-wide" style={{ color: 'var(--muted)' }}>Date</label>
@@ -130,9 +139,13 @@ export function Schedule({ data, persist, isAdmin, draft, clearDraft }) {
 
       {data.slots.length === 0 && blockedDates.length === 0 && <Empty title="No fixtures yet" body={isAdmin ? "Tap 'New slot' to schedule a set of matches between 3 teams." : 'Check back once the admin publishes the schedule.'} />}
 
+      {(data.slots.length > 0 || blockedDates.length > 0) && filterTeamId && !data.slots.some((s) => s.teamIds.includes(filterTeamId)) && (
+        <Empty title="No fixtures yet" body={`${teamById(filterTeamId)?.name} isn't scheduled in any slot yet.`} />
+      )}
+
       <div className="space-y-4">
         {[
-          ...data.slots.map((slot) => ({ kind: 'slot', date: slot.date || '', slot })),
+          ...data.slots.filter((slot) => !filterTeamId || slot.teamIds.includes(filterTeamId)).map((slot) => ({ kind: 'slot', date: slot.date || '', slot })),
           ...blockedDates.map((b) => ({ kind: 'blocked', date: b.date, blocked: b })),
         ].sort((x, y) => x.date.localeCompare(y.date)).map((item) => {
           if (item.kind === 'blocked') {
