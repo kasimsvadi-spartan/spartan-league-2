@@ -1,4 +1,4 @@
-import { Award, BarChart3, BookUser, CalendarDays, Crown, History, Home as HomeIcon, ListOrdered, Medal, ScrollText, Trophy, Users } from 'lucide-react'
+import { Award, BarChart3, BookUser, CalendarDays, Crown, History, Home as HomeIcon, IndianRupee, ListOrdered, Medal, ScrollText, Trophy, Users } from 'lucide-react'
 
 export const TABS = [
   { id: 'home', label: 'Home', icon: HomeIcon },
@@ -8,6 +8,7 @@ export const TABS = [
   { id: 'results', label: 'Results', icon: ListOrdered },
   { id: 'leaders', label: 'Leaders', icon: BarChart3 },
   { id: 'records', label: 'Records', icon: Medal },
+  { id: 'rewards', label: 'Rewards', icon: IndianRupee },
   { id: 'teams', label: 'Squads', icon: Users },
   { id: 'pool', label: 'Player Pool', icon: BookUser },
   { id: 'owners', label: 'Owners', icon: Crown },

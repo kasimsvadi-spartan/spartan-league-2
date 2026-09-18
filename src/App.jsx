@@ -26,6 +26,7 @@ const PlayerPool = lazy(() => import('./components/tabs/PlayerPool').then((m) =>
 const Owners = lazy(() => import('./components/tabs/Owners').then((m) => ({ default: m.Owners })))
 const SeasonArchive = lazy(() => import('./components/tabs/SeasonArchive').then((m) => ({ default: m.SeasonArchive })))
 const Rules = lazy(() => import('./components/tabs/Rules').then((m) => ({ default: m.Rules })))
+const Rewards = lazy(() => import('./components/tabs/Rewards').then((m) => ({ default: m.Rewards })))
 
 const TAB_COMPONENTS = {
   home: Home,
@@ -40,6 +41,7 @@ const TAB_COMPONENTS = {
   owners: Owners,
   archive: SeasonArchive,
   rules: Rules,
+  rewards: Rewards,
 }
 
 export default function App() {
