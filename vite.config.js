@@ -28,9 +28,27 @@ export default defineConfig({
         ],
       },
       workbox: {
-        // App shell + static assets: cache-first via Workbox precache (default for globPatterns).
-        globPatterns: ['**/*.{js,css,html,png,jpg,jpeg,webp,ico,svg,woff2}'],
+        // Static assets (hashed JS/CSS/images): cache-first via Workbox precache — safe
+        // because every deploy gives them a new filename, so there's nothing to go stale.
+        globPatterns: ['**/*.{js,css,png,jpg,jpeg,webp,ico,svg,woff2}'],
+        // The HTML shell is NOT hashed and is what names which JS/CSS files to load, so it
+        // must never be served cache-first — that's what let an already-cached tab boot an
+        // old bundle and 404 fetching a chunk the newest deploy no longer has. Disable the
+        // default precached SPA fallback and let the navigate rule below own it instead.
+        navigateFallback: null,
         runtimeCaching: [
+          {
+            // Navigations (the HTML shell): always prefer a fresh fetch so a reload always
+            // gets the deploy that's actually live; fall back to the cached shell only if
+            // offline or the network is slow.
+            urlPattern: ({ request }) => request.mode === 'navigate',
+            handler: 'NetworkFirst',
+            options: {
+              cacheName: 'html-shell',
+              networkTimeoutSeconds: 4,
+              cacheableResponse: { statuses: [0, 200] },
+            },
+          },
           {
             // Season data + storage reads: always prefer a fresh network response so the
             // app never shows stale data when online; fall back to the last-known cached
