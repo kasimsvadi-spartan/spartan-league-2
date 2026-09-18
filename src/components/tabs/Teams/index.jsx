@@ -1,7 +1,7 @@
 import { useState } from 'react'
 import { Pencil, Plus, Search, Users, X } from 'lucide-react'
 import { buildPlayerIndex, sortMvp } from '../../../lib/stats'
-import { findPoolPhoto, fmt } from '../../../lib/players'
+import { CATEGORY_LETTERS, findPoolPhoto, fmt } from '../../../lib/players'
 import { uploadPhoto } from '../../../lib/photo'
 import { uid } from '../../../lib/uid'
 import { Card } from '../../layout/Card'
@@ -17,6 +17,7 @@ export function Teams({ data, persist, isAdmin }) {
   const [openTeam, setOpenTeam] = useState(null)
   const [newName, setNewName] = useState('')
   const [newRole, setNewRole] = useState('Batter')
+  const [newCategory, setNewCategory] = useState('A')
   const [selected, setSelected] = useState(null)
   const [editingPlayer, setEditingPlayer] = useState(null)
   const [query, setQuery] = useState('')
@@ -34,7 +35,7 @@ export function Teams({ data, persist, isAdmin }) {
     if (!newName.trim()) return
     const team = data.teams.find((t) => t.id === teamId)
     if (team.players.length >= 9) return
-    const player = { id: uid('p'), name: newName.trim(), role: newRole, photoUrl: '', earnings: 0 }
+    const player = { id: uid('p'), name: newName.trim(), role: newRole, category: newCategory, photoUrl: '', earnings: 0 }
     persist({ ...data, teams: data.teams.map((t) => (t.id === teamId ? { ...t, players: [...t.players, player] } : t)) })
     setNewName('')
   }
@@ -131,7 +132,7 @@ export function Teams({ data, persist, isAdmin }) {
                             <div className="flex items-center justify-between px-2.5 py-1.5">
                               <div className="flex items-center gap-2">
                                 <PlayerAvatar player={withPhoto(p)} team={team} size={32} />
-                                <span className="text-sm">{p.name} <span className="text-xs" style={{ color: 'var(--muted2)' }}>· {p.role}</span></span>
+                                <span className="text-sm">{p.name} <span className="text-xs" style={{ color: 'var(--muted2)' }}>· {p.role}{p.category ? ` · Cat ${p.category}` : ''}</span></span>
                                 {p.earnings > 0 && <span className="text-[10px] px-1.5 py-0.5 rounded" style={{ background: 'rgba(232,185,35,0.15)', color: 'var(--gold)' }}>₹{p.earnings}</span>}
                               </div>
                               {isAdmin && (
@@ -162,7 +163,15 @@ export function Teams({ data, persist, isAdmin }) {
                                     <input value={p.photoUrl && p.photoUrl.startsWith('data:') ? '' : (p.photoUrl || '')} onChange={(e) => updatePlayer(team.id, p.id, { photoUrl: e.target.value })} placeholder="https://…" className="field w-full mt-1 px-2 py-1.5 text-xs" />
                                   </details>
                                 </div>
-                                <div><label className="text-[10px]" style={{ color: 'var(--muted)' }}>Total earnings (₹)</label><input inputMode="numeric" value={p.earnings || 0} onChange={(e) => updatePlayer(team.id, p.id, { earnings: Number(e.target.value) || 0 })} className="field w-full px-2 py-1.5 text-xs" /></div>
+                                <div className="grid grid-cols-2 gap-1.5">
+                                  <div><label className="text-[10px]" style={{ color: 'var(--muted)' }}>Category</label>
+                                    <select value={p.category || ''} onChange={(e) => updatePlayer(team.id, p.id, { category: e.target.value })} className="field w-full px-2 py-1.5 text-xs">
+                                      <option value="">—</option>
+                                      {CATEGORY_LETTERS.map((l) => <option key={l} value={l}>{l}</option>)}
+                                    </select>
+                                  </div>
+                                  <div><label className="text-[10px]" style={{ color: 'var(--muted)' }}>Total earnings (₹)</label><input inputMode="numeric" value={p.earnings || 0} onChange={(e) => updatePlayer(team.id, p.id, { earnings: Number(e.target.value) || 0 })} className="field w-full px-2 py-1.5 text-xs" /></div>
+                                </div>
                               </div>
                             )}
                           </div>
@@ -174,6 +183,9 @@ export function Teams({ data, persist, isAdmin }) {
                         <input placeholder="Player name" value={newName} onChange={(e) => setNewName(e.target.value)} className="field flex-1 px-2.5 py-1.5 text-sm" />
                         <select value={newRole} onChange={(e) => setNewRole(e.target.value)} className="field px-2 py-1.5 text-sm">
                           <option>Batter</option><option>Bowler</option><option>All-rounder</option><option>Wicketkeeper</option>
+                        </select>
+                        <select value={newCategory} onChange={(e) => setNewCategory(e.target.value)} className="field px-2 py-1.5 text-sm">
+                          {CATEGORY_LETTERS.map((l) => <option key={l} value={l}>Cat {l}</option>)}
                         </select>
                         <button onClick={() => addPlayer(team.id)} className="gold-btn rounded px-2.5"><Plus size={16} /></button>
                       </div>

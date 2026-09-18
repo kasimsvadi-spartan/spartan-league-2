@@ -1,14 +1,12 @@
 import { useState } from 'react'
 import { ChevronDown, ChevronUp, IndianRupee, Plus, Trash2, Trophy, Users } from 'lucide-react'
 import { uid } from '../../../lib/uid'
-import { findPoolPhoto, normName } from '../../../lib/players'
+import { CATEGORY_LETTERS, findPoolPhoto, normName } from '../../../lib/players'
 import { Card } from '../../layout/Card'
 import { SectionTitle } from '../../layout/SectionTitle'
 import { Empty } from '../../layout/Empty'
 import { ConfirmModal } from '../../layout/ConfirmModal'
 import { PlayerAvatar } from '../../shared/PlayerAvatar'
-
-const CATEGORY_LETTERS = ['A', 'B', 'C', 'D', 'E', 'F', 'G', 'H', 'I']
 
 const CATEGORIES = {
   slot: [
@@ -62,6 +60,12 @@ export function Rewards({ data, persist, isAdmin }) {
     setCategory(key)
     const c = ALL_CATEGORIES[key]
     setAmount(c ? c.amount : 0)
+    setRecipientName(''); setTeamId('')
+  }
+
+  function pickCategoryLetter(letter) {
+    setCategoryLetter(letter)
+    setRecipientName(''); setTeamId('')
   }
 
   function addEntry() {
@@ -109,6 +113,10 @@ export function Rewards({ data, persist, isAdmin }) {
   }
 
   const selectedCategory = ALL_CATEGORIES[category]
+
+  const categoryPlayers = category === 'categoryWinner'
+    ? data.teams.flatMap((t) => t.players.filter((p) => p.category === categoryLetter).map((p) => ({ ...p, teamId: t.id, teamName: t.name })))
+    : []
 
   const groups = (() => {
     const map = new Map()
@@ -236,9 +244,30 @@ export function Rewards({ data, persist, isAdmin }) {
             {category === 'categoryWinner' && (
               <>
                 <label className="text-[10px] uppercase tracking-wide" style={{ color: 'var(--muted)' }}>Which category?</label>
-                <select value={categoryLetter} onChange={(e) => setCategoryLetter(e.target.value)} className="field w-full mt-1 mb-2 px-2 py-1.5 text-sm">
+                <select value={categoryLetter} onChange={(e) => pickCategoryLetter(e.target.value)} className="field w-full mt-1 mb-2 px-2 py-1.5 text-sm">
                   {CATEGORY_LETTERS.map((l) => <option key={l} value={l}>Category {l}</option>)}
                 </select>
+                <label className="text-[10px] uppercase tracking-wide" style={{ color: 'var(--muted)' }}>Category {categoryLetter} players — pick the winner</label>
+                {categoryPlayers.length === 0 ? (
+                  <p className="text-xs mt-1 mb-2" style={{ color: 'var(--muted2)' }}>No players assigned to Category {categoryLetter} yet — assign categories in Squads first.</p>
+                ) : (
+                  <div className="space-y-1.5 mt-1 mb-2">
+                    {categoryPlayers.map((p) => {
+                      const selected = recipientName === p.name && teamId === p.teamId
+                      return (
+                        <button
+                          key={p.id}
+                          onClick={() => { setRecipientName(p.name); setTeamId(p.teamId) }}
+                          className={`w-full flex items-center gap-2 px-2.5 py-1.5 rounded-md text-sm text-left ${selected ? 'chip-selected' : 'chip-outline'}`}
+                        >
+                          <PlayerAvatar player={{ name: p.name, photoUrl: p.photoUrl || findPoolPhoto(data.playerPool, p.name) }} size={26} />
+                          <span className="flex-1">{p.name}</span>
+                          <span className="text-xs" style={{ color: 'var(--muted2)' }}>{p.teamName}</span>
+                        </button>
+                      )
+                    })}
+                  </div>
+                )}
               </>
             )}
 
@@ -258,13 +287,19 @@ export function Rewards({ data, persist, isAdmin }) {
               </>
             )}
 
-            <label className="text-[10px] uppercase tracking-wide" style={{ color: 'var(--muted)' }}>Recipient name</label>
-            <input value={recipientName} onChange={(e) => setRecipientName(e.target.value)} placeholder="Player or owner name" className="field w-full mt-1 mb-2 px-2 py-1.5 text-sm" />
-            <label className="text-[10px] uppercase tracking-wide" style={{ color: 'var(--muted)' }}>Team (optional)</label>
-            <select value={teamId} onChange={(e) => setTeamId(e.target.value)} className="field w-full mt-1 mb-2 px-2 py-1.5 text-sm">
-              <option value="">—</option>
-              {data.teams.map((t) => <option key={t.id} value={t.id}>{t.name}</option>)}
-            </select>
+            {category === 'categoryWinner' ? (
+              recipientName && <p className="text-xs mb-2" style={{ color: 'var(--gold)' }}>Winner selected: {recipientName} ({teamById(teamId)?.name})</p>
+            ) : (
+              <>
+                <label className="text-[10px] uppercase tracking-wide" style={{ color: 'var(--muted)' }}>Recipient name</label>
+                <input value={recipientName} onChange={(e) => setRecipientName(e.target.value)} placeholder="Player or owner name" className="field w-full mt-1 mb-2 px-2 py-1.5 text-sm" />
+                <label className="text-[10px] uppercase tracking-wide" style={{ color: 'var(--muted)' }}>Team (optional)</label>
+                <select value={teamId} onChange={(e) => setTeamId(e.target.value)} className="field w-full mt-1 mb-2 px-2 py-1.5 text-sm">
+                  <option value="">—</option>
+                  {data.teams.map((t) => <option key={t.id} value={t.id}>{t.name}</option>)}
+                </select>
+              </>
+            )}
             <label className="text-[10px] uppercase tracking-wide" style={{ color: 'var(--muted)' }}>Amount (₹)</label>
             <input type="number" value={amount} onChange={(e) => setAmount(e.target.value)} className="field w-full mt-1 mb-2 px-2 py-1.5 text-sm" />
             {category === 'challenge' && (

@@ -1,5 +1,8 @@
 // Name/team matching for CricHeroes CSV imports and player lookups elsewhere.
 
+// Draft category (A-I), one per team per category - the same convention Season 1 used.
+export const CATEGORY_LETTERS = ['A', 'B', 'C', 'D', 'E', 'F', 'G', 'H', 'I']
+
 // CricHeroes team names have a "SL#" slot suffix (e.g. "MMT RANGERS SL1") that must be
 // stripped before matching against our own team names.
 export function normTeam(s) {
