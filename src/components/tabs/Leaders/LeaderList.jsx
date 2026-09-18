@@ -1,9 +1,9 @@
 import { useState } from 'react'
-import { normName } from '../../../lib/players'
+import { findPoolPhoto, normName } from '../../../lib/players'
 import { TeamLogo } from '../../shared/TeamLogo'
 import { PlayerAvatar } from '../../shared/PlayerAvatar'
 
-export function LeaderList({ title, rows, onSelect, valueFn, subFn }) {
+export function LeaderList({ title, rows, onSelect, valueFn, subFn, playerPool }) {
   const [expanded, setExpanded] = useState(false)
   if (rows.length === 0) return null
   const shown = expanded ? rows : rows.slice(0, 10)
@@ -17,7 +17,8 @@ export function LeaderList({ title, rows, onSelect, valueFn, subFn }) {
               <span className="display text-lg w-5" style={{ color: 'var(--muted)' }}>{i + 1}</span>
               {(() => {
                 const squadPlayer = p.team ? p.team.players.find((sp) => normName(sp.name) === normName(p.name)) : null
-                return squadPlayer && squadPlayer.photoUrl ? <PlayerAvatar player={squadPlayer} team={p.team} size={32} /> : p.team ? <TeamLogo team={p.team} size={32} /> : <span style={{ width: 32, height: 32, background: 'var(--hair2)', borderRadius: '50%', display: 'inline-block' }} />
+                const photoUrl = (squadPlayer && squadPlayer.photoUrl) || findPoolPhoto(playerPool, p.name)
+                return photoUrl ? <PlayerAvatar player={{ name: p.name, photoUrl }} team={p.team} size={32} /> : p.team ? <TeamLogo team={p.team} size={32} /> : <span style={{ width: 32, height: 32, background: 'var(--hair2)', borderRadius: '50%', display: 'inline-block' }} />
               })()}
               <div>
                 <p className="text-sm font-medium">{p.name}</p>

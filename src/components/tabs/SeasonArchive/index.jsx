@@ -2,6 +2,7 @@ import { useState } from 'react'
 import { History, ListOrdered, Plus, Trophy, X } from 'lucide-react'
 import { uid } from '../../../lib/uid'
 import { uploadPhoto } from '../../../lib/photo'
+import { findPoolPhoto } from '../../../lib/players'
 import { Card } from '../../layout/Card'
 import { SectionTitle } from '../../layout/SectionTitle'
 import { Empty } from '../../layout/Empty'
@@ -121,23 +122,26 @@ export function SeasonArchive({ data, persist, isAdmin }) {
               <p className="text-sm mb-2" style={{ color: 'var(--muted2)' }}>No members added yet.</p>
             ) : (
               <div className="space-y-1.5 mb-3">
-                {archive.champion.members.map((m) => (
+                {archive.champion.members.map((m) => {
+                  const poolPhoto = !m.photoUrl && findPoolPhoto(data.playerPool, m.name)
+                  return (
                   <div key={m.id} className="flex items-center justify-between px-2.5 py-1.5 rounded" style={{ background: 'var(--ink)' }}>
                     <div className="flex items-center gap-2">
-                      <PlayerAvatar player={m} size={28} />
+                      <PlayerAvatar player={poolPhoto ? { ...m, photoUrl: poolPhoto } : m} size={28} />
                       <span className="text-sm">{m.name} <span className="text-xs" style={{ color: 'var(--muted2)' }}>· {m.role}</span></span>
                     </div>
                     {isAdmin && (
                       <div className="flex items-center gap-2">
                         <label className="text-[10px]" style={{ color: 'var(--gold)', cursor: 'pointer' }}>
-                          {uploadingId === m.id ? '…' : 'Photo'}
+                          {uploadingId === m.id ? '…' : m.photoUrl ? 'Replace' : poolPhoto ? 'Replace' : 'Photo'}
                           <input type="file" accept="image/*" style={{ display: 'none' }} onChange={(e) => handleMemberPhotoUpload(m.id, e.target.files[0])} />
                         </label>
                         <button onClick={() => removeMember(m.id)}><X size={13} color="var(--muted)" /></button>
                       </div>
                     )}
                   </div>
-                ))}
+                  )
+                })}
               </div>
             )}
             {isAdmin && (

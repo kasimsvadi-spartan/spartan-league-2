@@ -1,7 +1,7 @@
 import { useState } from 'react'
 import { Pencil, Plus, Search, Users, X } from 'lucide-react'
 import { buildPlayerIndex, sortMvp } from '../../../lib/stats'
-import { fmt } from '../../../lib/players'
+import { findPoolPhoto, fmt } from '../../../lib/players'
 import { uploadPhoto } from '../../../lib/photo'
 import { uid } from '../../../lib/uid'
 import { Card } from '../../layout/Card'
@@ -57,6 +57,10 @@ export function Teams({ data, persist, isAdmin }) {
     setUploadingId(null)
   }
 
+  function withPhoto(p) {
+    return p.photoUrl ? p : { ...p, photoUrl: findPoolPhoto(data.playerPool, p.name) }
+  }
+
   const q = query.trim().toLowerCase()
   const searchMatches = q ? data.teams.flatMap((t) => t.players.filter((p) => p.name.toLowerCase().includes(q)).map((p) => ({ ...p, team: t }))) : null
 
@@ -76,7 +80,7 @@ export function Teams({ data, persist, isAdmin }) {
             {searchMatches.map((p) => (
               <button key={p.id} onClick={() => { setOpenTeam(p.team.id); setQuery('') }} className="w-full ember-card flex items-center justify-between text-left" style={{ padding: '10px 14px' }}>
                 <div className="flex items-center gap-2.5">
-                  <PlayerAvatar player={p} team={p.team} size={28} />
+                  <PlayerAvatar player={withPhoto(p)} team={p.team} size={28} />
                   <div>
                     <p className="text-sm font-medium">{p.name}</p>
                     <p className="text-[11px]" style={{ color: 'var(--muted2)' }}>{p.role}</p>
@@ -126,7 +130,7 @@ export function Teams({ data, persist, isAdmin }) {
                           <div key={p.id} className="rounded" style={{ background: 'var(--ink)' }}>
                             <div className="flex items-center justify-between px-2.5 py-1.5">
                               <div className="flex items-center gap-2">
-                                <PlayerAvatar player={p} team={team} size={32} />
+                                <PlayerAvatar player={withPhoto(p)} team={team} size={32} />
                                 <span className="text-sm">{p.name} <span className="text-xs" style={{ color: 'var(--muted2)' }}>· {p.role}</span></span>
                                 {p.earnings > 0 && <span className="text-[10px] px-1.5 py-0.5 rounded" style={{ background: 'rgba(232,185,35,0.15)', color: 'var(--gold)' }}>₹{p.earnings}</span>}
                               </div>
@@ -142,12 +146,15 @@ export function Teams({ data, persist, isAdmin }) {
                                 <div>
                                   <label className="text-[10px]" style={{ color: 'var(--muted)' }}>Photo</label>
                                   <div className="flex items-center gap-2 mt-1">
-                                    <PlayerAvatar player={p} team={team} size={36} />
+                                    <PlayerAvatar player={withPhoto(p)} team={team} size={36} />
                                     <label className="plain-btn text-xs px-2.5 py-1.5 rounded-md" style={{ cursor: 'pointer' }}>
-                                      {uploadingId === p.id ? 'Uploading…' : 'Upload photo'}
+                                      {uploadingId === p.id ? 'Uploading…' : p.photoUrl ? 'Replace photo' : 'Upload photo'}
                                       <input type="file" accept="image/*" style={{ display: 'none' }} onChange={(e) => handlePhotoUpload(team.id, p.id, e.target.files[0])} />
                                     </label>
                                   </div>
+                                  {!p.photoUrl && findPoolPhoto(data.playerPool, p.name) && (
+                                    <p className="text-[10px] mt-1" style={{ color: 'var(--gold)' }}>Reusing this player's Player Pool photo — upload here only to use a different one.</p>
+                                  )}
                                   {uploadErr && uploadingId === null && <p className="text-[10px] mt-1" style={{ color: 'var(--red)' }}>{uploadErr}</p>}
                                   <p className="text-[9px] mt-1" style={{ color: 'var(--faint)' }}>Stored in Supabase Storage — no external site needed, so it always loads.</p>
                                   <details className="mt-1.5">

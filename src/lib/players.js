@@ -19,6 +19,16 @@ export function playerKey(name, teamRaw) {
   return normName(name) + '|' + normTeam(teamRaw)
 }
 
+// A player's photo often already exists somewhere else under the same name (the Player
+// Pool, most reliably, since every real person passes through it) — check there before
+// asking the admin to upload the same picture again.
+export function findPoolPhoto(playerPool, name) {
+  const n = normName(name)
+  if (!n) return ''
+  const hit = (playerPool || []).find((p) => p.photoUrl && normName(p.name) === n)
+  return hit ? hit.photoUrl : ''
+}
+
 export function num(v) {
   const n = parseFloat(v)
   return Number.isFinite(n) ? n : null

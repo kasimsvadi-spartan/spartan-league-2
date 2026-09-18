@@ -50,14 +50,14 @@ export function Leaders({ data, persist, isAdmin }) {
         searchResults.length === 0 ? (
           <Empty title="No players found" body={`Nobody matching "${query}" in the imported stats.`} />
         ) : (
-          <LeaderList title={`${searchResults.length} result${searchResults.length === 1 ? '' : 's'}`} rows={searchResults} onSelect={setSelected} valueFn={(p) => (p.mvp ? fmt(p.mvp.total, 1) : '—')} subFn={(p) => (p.team ? p.team.name : '')} />
+          <LeaderList playerPool={data.playerPool} title={`${searchResults.length} result${searchResults.length === 1 ? '' : 's'}`} rows={searchResults} onSelect={setSelected} valueFn={(p) => (p.mvp ? fmt(p.mvp.total, 1) : '—')} subFn={(p) => (p.team ? p.team.name : '')} />
         )
       ) : (
         <div className="space-y-6">
-          <LeaderList title="MVP Rankings" rows={topMvp} onSelect={setSelected} valueFn={(p) => fmt(p.mvp.total, 1)} subFn={(p) => `${p.mvp.slots} slot${p.mvp.slots === 1 ? '' : 's'} tracked`} />
-          <LeaderList title="Most Runs" rows={topBatting} onSelect={setSelected} valueFn={(p) => p.batting.total_runs} subFn={(p) => `Avg ${fmt(p.batting.average)} · SR ${fmt(p.batting.strike_rate)}`} />
-          <LeaderList title="Most Wickets" rows={topBowling} onSelect={setSelected} valueFn={(p) => p.bowling.total_wickets} subFn={(p) => `Avg ${fmt(p.bowling.avg)} · Econ ${fmt(p.bowling.economy)}`} />
-          <LeaderList title="Best Fielders" rows={topFielding} onSelect={setSelected} valueFn={(p) => p.fielding.total_dismissal} subFn={(p) => `${p.fielding.slots} slot${p.fielding.slots === 1 ? '' : 's'} tracked`} />
+          <LeaderList playerPool={data.playerPool} title="MVP Rankings" rows={topMvp} onSelect={setSelected} valueFn={(p) => fmt(p.mvp.total, 1)} subFn={(p) => `${p.mvp.slots} slot${p.mvp.slots === 1 ? '' : 's'} tracked`} />
+          <LeaderList playerPool={data.playerPool} title="Most Runs" rows={topBatting} onSelect={setSelected} valueFn={(p) => p.batting.total_runs} subFn={(p) => `Avg ${fmt(p.batting.average)} · SR ${fmt(p.batting.strike_rate)}`} />
+          <LeaderList playerPool={data.playerPool} title="Most Wickets" rows={topBowling} onSelect={setSelected} valueFn={(p) => p.bowling.total_wickets} subFn={(p) => `Avg ${fmt(p.bowling.avg)} · Econ ${fmt(p.bowling.economy)}`} />
+          <LeaderList playerPool={data.playerPool} title="Best Fielders" rows={topFielding} onSelect={setSelected} valueFn={(p) => p.fielding.total_dismissal} subFn={(p) => `${p.fielding.slots} slot${p.fielding.slots === 1 ? '' : 's'} tracked`} />
         </div>
       )}
 
