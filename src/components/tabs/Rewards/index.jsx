@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { IndianRupee, Plus, Trash2, Trophy, Users } from 'lucide-react'
+import { ChevronDown, ChevronUp, IndianRupee, Plus, Trash2, Trophy, Users } from 'lucide-react'
 import { uid } from '../../../lib/uid'
 import { findPoolPhoto, normName } from '../../../lib/players'
 import { Card } from '../../layout/Card'
@@ -7,6 +7,8 @@ import { SectionTitle } from '../../layout/SectionTitle'
 import { Empty } from '../../layout/Empty'
 import { ConfirmModal } from '../../layout/ConfirmModal'
 import { PlayerAvatar } from '../../shared/PlayerAvatar'
+
+const CATEGORY_LETTERS = ['A', 'B', 'C', 'D', 'E', 'F', 'G', 'H', 'I']
 
 const CATEGORIES = {
   slot: [
@@ -45,7 +47,9 @@ export function Rewards({ data, persist, isAdmin }) {
   const [teamId, setTeamId] = useState('')
   const [amount, setAmount] = useState(CATEGORIES.slot[0].amount)
   const [note, setNote] = useState('')
+  const [categoryLetter, setCategoryLetter] = useState('A')
   const [confirmDeleteId, setConfirmDeleteId] = useState(null)
+  const [toggled, setToggled] = useState(() => new Set())
 
   const sortedSlots = [...data.slots].filter((s) => s.date).sort((a, b) => a.date.localeCompare(b.date))
   const teamById = (id) => data.teams.find((t) => t.id === id)
@@ -63,13 +67,14 @@ export function Rewards({ data, persist, isAdmin }) {
   function addEntry() {
     if (!recipientName.trim() || amount === '' || amount == null) return
     const slot = slotId ? sortedSlots.find((s) => s.id === slotId) : null
+    const label = category === 'categoryWinner' ? `Category ${categoryLetter} Winner` : ALL_CATEGORIES[category]?.label || category
     const entry = {
       id: uid('reward'),
       scope,
       slotId: scope === 'slot' ? slotId : null,
       slotLabel: scope === 'slot' && slot ? new Date(slot.date + 'T00:00').toDateString() : 'Tournament Awards',
       category,
-      categoryLabel: ALL_CATEGORIES[category]?.label || category,
+      categoryLabel: label,
       recipientName: recipientName.trim(),
       team: teamId ? teamById(teamId)?.name || '' : '',
       amount: Number(amount) || 0,
@@ -104,6 +109,25 @@ export function Rewards({ data, persist, isAdmin }) {
   }
 
   const selectedCategory = ALL_CATEGORIES[category]
+
+  const groups = (() => {
+    const map = new Map()
+    entries.forEach((e) => {
+      const key = e.slotId || 'tournament'
+      if (!map.has(key)) map.set(key, { key, slotLabel: e.slotLabel, slotDate: '', items: [], total: 0 })
+      const g = map.get(key)
+      g.items.push(e)
+      g.total += e.amount
+    })
+    for (const g of map.values()) {
+      if (g.key !== 'tournament') g.slotDate = sortedSlots.find((s) => s.id === g.key)?.date || ''
+    }
+    return [...map.values()].sort((a, b) => {
+      if (a.key === 'tournament') return -1
+      if (b.key === 'tournament') return 1
+      return b.slotDate.localeCompare(a.slotDate)
+    })
+  })()
 
   const earnings = (() => {
     const byName = new Map()
@@ -209,6 +233,15 @@ export function Rewards({ data, persist, isAdmin }) {
               {CATEGORIES[scope].map((c) => <option key={c.key} value={c.key}>{c.label}</option>)}
             </select>
 
+            {category === 'categoryWinner' && (
+              <>
+                <label className="text-[10px] uppercase tracking-wide" style={{ color: 'var(--muted)' }}>Which category?</label>
+                <select value={categoryLetter} onChange={(e) => setCategoryLetter(e.target.value)} className="field w-full mt-1 mb-2 px-2 py-1.5 text-sm">
+                  {CATEGORY_LETTERS.map((l) => <option key={l} value={l}>Category {l}</option>)}
+                </select>
+              </>
+            )}
+
             {selectedCategory?.teamReward && (
               <>
                 <label className="text-[10px] uppercase tracking-wide" style={{ color: 'var(--muted)' }}>Team (pays every current squad player)</label>
@@ -241,28 +274,57 @@ export function Rewards({ data, persist, isAdmin }) {
               </>
             )}
             <button disabled={!recipientName.trim()} onClick={addEntry} className="plain-btn w-full py-2 rounded-md text-sm">Log this reward</button>
+            {(scope === 'slot' ? slotId : true) && (() => {
+              const logged = entries.filter((e) => (scope === 'slot' ? e.slotId === slotId : e.scope === 'tournament'))
+              return logged.length > 0 && (
+                <p className="text-[11px] mt-2 text-center" style={{ color: 'var(--gold)' }}>{logged.length} reward{logged.length === 1 ? '' : 's'} logged for {scope === 'slot' ? 'this slot' : 'the tournament'} so far — {inr(logged.reduce((s, e) => s + e.amount, 0))} total</p>
+              )
+            })()}
           </Card>
         )}
 
         {entries.length === 0 ? (
           <Empty title="No rewards logged yet" body={isAdmin ? "Tap 'Add' after a slot to record who won what." : 'Check back once the admin logs this slot\'s winners.'} />
         ) : (
-          <div className="space-y-1.5">
-            {entries.map((e) => {
-              const photo = findPoolPhoto(data.playerPool, e.recipientName)
+          <div className="space-y-2">
+            {groups.map((g, i) => {
+              const defaultOpen = i === 0
+              const open = toggled.has(g.key) ? !defaultOpen : defaultOpen
               return (
-                <div key={e.id} className="flex items-center justify-between px-2.5 py-2 rounded" style={{ background: 'var(--ink)' }}>
-                  <div className="flex items-center gap-2.5">
-                    <PlayerAvatar player={{ name: e.recipientName, photoUrl: photo }} size={30} />
-                    <div>
-                      <p className="text-sm font-medium">{e.recipientName} {e.team && <span className="text-[11px]" style={{ color: 'var(--muted2)' }}>· {e.team}</span>}</p>
-                      <p className="text-[11px]" style={{ color: 'var(--muted2)' }}>{e.categoryLabel}{e.note ? ` — ${e.note}` : ''} · {e.slotLabel}</p>
+                <div key={g.key}>
+                  <button
+                    onClick={() => setToggled((s) => { const n = new Set(s); n.has(g.key) ? n.delete(g.key) : n.add(g.key); return n })}
+                    className="w-full flex items-center justify-between px-2.5 py-2 rounded"
+                    style={{ background: 'var(--ink)' }}
+                  >
+                    <span className="text-sm font-semibold">{g.slotLabel}</span>
+                    <span className="flex items-center gap-2 text-xs" style={{ color: 'var(--muted2)' }}>
+                      {g.items.length} reward{g.items.length === 1 ? '' : 's'} · <span className="gold-text font-semibold">{inr(g.total)}</span>
+                      {open ? <ChevronUp size={14} /> : <ChevronDown size={14} />}
+                    </span>
+                  </button>
+                  {open && (
+                    <div className="space-y-1.5 mt-1.5">
+                      {g.items.map((e) => {
+                        const photo = findPoolPhoto(data.playerPool, e.recipientName)
+                        return (
+                          <div key={e.id} className="flex items-center justify-between px-2.5 py-2 rounded" style={{ background: 'var(--ink)' }}>
+                            <div className="flex items-center gap-2.5">
+                              <PlayerAvatar player={{ name: e.recipientName, photoUrl: photo }} size={30} />
+                              <div>
+                                <p className="text-sm font-medium">{e.recipientName} {e.team && <span className="text-[11px]" style={{ color: 'var(--muted2)' }}>· {e.team}</span>}</p>
+                                <p className="text-[11px]" style={{ color: 'var(--muted2)' }}>{e.categoryLabel}{e.note ? ` — ${e.note}` : ''}</p>
+                              </div>
+                            </div>
+                            <div className="flex items-center gap-2">
+                              <span className="display text-lg gold-text">{inr(e.amount)}</span>
+                              {isAdmin && <button onClick={() => setConfirmDeleteId(e.id)}><Trash2 size={13} color="var(--muted)" /></button>}
+                            </div>
+                          </div>
+                        )
+                      })}
                     </div>
-                  </div>
-                  <div className="flex items-center gap-2">
-                    <span className="display text-lg gold-text">{inr(e.amount)}</span>
-                    {isAdmin && <button onClick={() => setConfirmDeleteId(e.id)}><Trash2 size={13} color="var(--muted)" /></button>}
-                  </div>
+                  )}
                 </div>
               )
             })}
