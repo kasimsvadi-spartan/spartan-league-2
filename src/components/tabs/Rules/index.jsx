@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { ChevronDown, ChevronUp, Pencil, Plus, ScrollText, X } from 'lucide-react'
+import { ChevronDown, ChevronUp, Clock, Pencil, Plus, ScrollText, X } from 'lucide-react'
 import { uid } from '../../../lib/uid'
 import { defaultRuleBook } from '../../../lib/defaultRuleBook'
 import { Card } from '../../layout/Card'
@@ -11,6 +11,11 @@ export function Rules({ data, persist, isAdmin }) {
   const sections = data.ruleBook || []
   const [editingId, setEditingId] = useState(null)
   const [confirmDeleteId, setConfirmDeleteId] = useState(null)
+  const timePenaltyEnabled = !!data.timePenaltyEnabled
+
+  function setTimePenaltyEnabled(v) {
+    persist({ ...data, timePenaltyEnabled: v })
+  }
 
   function save(next) {
     persist({ ...data, ruleBook: next })
@@ -42,6 +47,30 @@ export function Rules({ data, persist, isAdmin }) {
   return (
     <div>
       <SectionTitle icon={ScrollText}>Rule Book</SectionTitle>
+
+      <Card className="mb-4">
+        <div className="flex items-center justify-between gap-3">
+          <div className="flex items-center gap-2.5">
+            <Clock size={18} color={timePenaltyEnabled ? 'var(--gold)' : 'var(--muted)'} />
+            <div>
+              <p className="text-sm font-semibold">Time Penalty Rule</p>
+              <p className="text-[11px]" style={{ color: 'var(--muted2)' }}>Both teams lose 1 point if their match overruns the allotted time.</p>
+            </div>
+          </div>
+          {isAdmin ? (
+            <button
+              onClick={() => setTimePenaltyEnabled(!timePenaltyEnabled)}
+              className="px-3 py-1.5 rounded-full text-xs font-semibold shrink-0"
+              style={timePenaltyEnabled ? { background: 'var(--gold)', color: '#1A1409' } : { border: '1px solid var(--hair2)', color: 'var(--muted)' }}
+            >
+              {timePenaltyEnabled ? 'ON' : 'OFF'}
+            </button>
+          ) : (
+            <span className="text-xs font-semibold shrink-0" style={{ color: timePenaltyEnabled ? 'var(--gold)' : 'var(--muted)' }}>{timePenaltyEnabled ? 'ON' : 'OFF'}</span>
+          )}
+        </div>
+        <p className="text-[10px] mt-2" style={{ color: 'var(--faint)' }}>Whoever enters a match result can flag it as over-time regardless of this setting — this switch only controls whether that flag actually costs points.</p>
+      </Card>
 
       {sections.length === 0 ? (
         <Empty

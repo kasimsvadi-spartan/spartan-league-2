@@ -3,10 +3,10 @@ import { Award, BarChart3, BookUser, CalendarDays, Crown, History, Home as HomeI
 export const TABS = [
   { id: 'home', label: 'Home', icon: HomeIcon },
   { id: 'points', label: 'Points', icon: Trophy },
-  { id: 'qualify', label: 'Qualify', icon: Award },
+  { id: 'qualify', label: 'Qualification Scenario', icon: Award },
   { id: 'schedule', label: 'Schedule', icon: CalendarDays },
   { id: 'results', label: 'Results', icon: ListOrdered },
-  { id: 'leaders', label: 'Leaders', icon: BarChart3 },
+  { id: 'leaders', label: 'Leaderboard', icon: BarChart3 },
   { id: 'records', label: 'Records', icon: Medal },
   { id: 'rewards', label: 'Rewards', icon: IndianRupee },
   { id: 'teams', label: 'Squads', icon: Users },

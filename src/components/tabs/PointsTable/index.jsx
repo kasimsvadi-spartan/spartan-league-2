@@ -29,13 +29,14 @@ export function PointsTable({ data }) {
                 <div>{r.placement} slot pts</div>
                 <div style={{ color: r.bonusFor > 0 ? 'var(--green)' : 'var(--muted)' }}>+{r.bonusFor} bonus</div>
                 <div style={{ color: r.bonusAgainst > 0 ? 'var(--red)' : 'var(--muted)' }}>-{r.bonusAgainst} conceded</div>
+                {r.timePenalty > 0 && <div style={{ color: 'var(--red)' }}>-{r.timePenalty} time</div>}
               </div>
               <div className="display text-2xl gold-text w-10">{r.total}</div>
             </div>
           </Card>
         ))}
       </div>
-      <p className="text-[11px] mt-3 mb-5" style={{ color: 'var(--muted2)' }}>Slot pts: 4 for slot winner, 2 for runner-up, 0 for 3rd. Bonus applies only to full 7-over matches: +1 for a 30+ run win or chasing in ≤4 overs; +2 for a 60+ run win or chasing in ≤2 overs — subtracted from the opponent as negative points. Ties on points are broken by league-stage Net Run Rate.</p>
+      <p className="text-[11px] mt-3 mb-5" style={{ color: 'var(--muted2)' }}>Slot pts: 4 for slot winner, 2 for runner-up, 0 for 3rd. Bonus applies only to full 7-over matches: +1 for a 30+ run win or chasing in ≤4 overs; +2 for a 60+ run win or chasing in ≤2 overs — subtracted from the opponent as negative points.{data.timePenaltyEnabled ? ' Both teams lose 1 point for a match that overran its allotted time.' : ''} Ties on points are broken by league-stage Net Run Rate.</p>
 
       {progression.length >= 2 && (
         <div>
