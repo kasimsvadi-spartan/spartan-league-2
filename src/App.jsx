@@ -1,5 +1,5 @@
 import { lazy, Suspense, useState } from 'react'
-import { Loader2 } from 'lucide-react'
+import { Loader2, X } from 'lucide-react'
 import { useSeasonData } from './hooks/useSeasonData'
 import { useAdmin } from './hooks/useAdmin'
 import { Header } from './components/layout/Header'
@@ -45,7 +45,7 @@ const TAB_COMPONENTS = {
 }
 
 export default function App() {
-  const { data, loading, persist } = useSeasonData()
+  const { data, loading, saveError, clearSaveError, persist } = useSeasonData()
   const { isAdmin, checking, login, logout } = useAdmin()
   const [tab, setTab] = useState('home')
   const [showPin, setShowPin] = useState(false)
@@ -93,6 +93,12 @@ export default function App() {
           </div>
         )}
         {importErr && <p className="alert-red text-sm mb-4">{importErr}</p>}
+        {saveError && (
+          <div className="alert-red text-sm mb-4 flex items-start justify-between gap-3">
+            <span>{saveError.message}</span>
+            <button onClick={clearSaveError} className="shrink-0"><X size={14} /></button>
+          </div>
+        )}
         <Suspense fallback={<div className="flex justify-center py-10"><Loader2 className="animate-spin" size={20} color="var(--muted)" /></div>}>
           <TabComponent
             data={data}
