@@ -129,13 +129,21 @@ export function ResultModal({ data, persist, slotId, matchId, teamA, teamB, slot
           <option value={teamB.id}>{teamB.name}</option>
         </select>
 
-        <div className="mb-3">
-          <p className="text-xs mb-1.5" style={{ color: 'var(--muted)' }}>{teamA.name}{battingFirst === teamA.id ? ' (batted first)' : ''}</p>
-          <div className="grid grid-cols-2 gap-2">
-            <div><label className="text-[10px]" style={{ color: 'var(--muted2)' }}>Score</label><input inputMode="numeric" value={scoreA} onChange={(e) => setScoreA(e.target.value)} className="field w-full mt-1 px-3 py-2 text-sm" /></div>
-            <div><label className="text-[10px]" style={{ color: 'var(--muted2)' }}>Overs faced</label><input inputMode="decimal" value={oversA} onChange={(e) => setOversA(e.target.value)} className="field w-full mt-1 px-3 py-2 text-sm" /></div>
+        {isWalkover && secondId === teamA.id ? (
+          <div className="mb-3 px-2.5 py-2 rounded-md" style={{ background: 'rgba(215, 72, 77, 0.12)', border: '1px solid var(--red)' }}>
+            <p className="text-xs" style={{ color: 'var(--red)' }}>
+              {teamB.name}'s net total is {firstNet} — {teamA.name} wins immediately without batting.
+            </p>
           </div>
-        </div>
+        ) : (
+          <div className="mb-3">
+            <p className="text-xs mb-1.5" style={{ color: 'var(--muted)' }}>{teamA.name}{battingFirst === teamA.id ? ' (batted first)' : ''}</p>
+            <div className="grid grid-cols-2 gap-2">
+              <div><label className="text-[10px]" style={{ color: 'var(--muted2)' }}>Score</label><input inputMode="numeric" value={scoreA} onChange={(e) => setScoreA(e.target.value)} className="field w-full mt-1 px-3 py-2 text-sm" /></div>
+              <div><label className="text-[10px]" style={{ color: 'var(--muted2)' }}>Overs faced</label><input inputMode="decimal" value={oversA} onChange={(e) => setOversA(e.target.value)} className="field w-full mt-1 px-3 py-2 text-sm" /></div>
+            </div>
+          </div>
+        )}
 
         {isWalkover && secondId === teamB.id ? (
           <div className="mb-3 px-2.5 py-2 rounded-md" style={{ background: 'rgba(215, 72, 77, 0.12)', border: '1px solid var(--red)' }}>
@@ -150,13 +158,6 @@ export function ResultModal({ data, persist, slotId, matchId, teamA, teamB, slot
               <div><label className="text-[10px]" style={{ color: 'var(--muted2)' }}>Score</label><input inputMode="numeric" value={scoreB} onChange={(e) => setScoreB(e.target.value)} className="field w-full mt-1 px-3 py-2 text-sm" /></div>
               <div><label className="text-[10px]" style={{ color: 'var(--muted2)' }}>Overs faced</label><input inputMode="decimal" value={oversB} onChange={(e) => setOversB(e.target.value)} className="field w-full mt-1 px-3 py-2 text-sm" /></div>
             </div>
-          </div>
-        )}
-        {isWalkover && secondId === teamA.id && (
-          <div className="mb-3 px-2.5 py-2 rounded-md" style={{ background: 'rgba(215, 72, 77, 0.12)', border: '1px solid var(--red)' }}>
-            <p className="text-xs" style={{ color: 'var(--red)' }}>
-              {teamB.name}'s net total is {firstNet} — {teamA.name} wins immediately without batting.
-            </p>
           </div>
         )}
 
