@@ -180,7 +180,7 @@ export function resolveMatch(raw, advantageTeamId = null, advantageAmount = 0) {
         [firstId]: { runs: firstNet, overs: firstOvers },
         [secondId]: { runs: firstGross, overs: 1 },
       },
-      marginBonus: { [firstId]: 0, [secondId]: 2 },
+      marginBonus: { [firstId]: -2, [secondId]: 2 },
     }
   }
 
@@ -205,9 +205,11 @@ export function resolveMatch(raw, advantageTeamId = null, advantageAmount = 0) {
   if (winner && full) {
     const winnerBattedFirst = winner === firstId
     const margin = Math.abs(firstNet - secondNet)
-    marginBonus[winner] = winnerBattedFirst
+    const bonus = winnerBattedFirst
       ? marginBonusPts(margin)
       : chaseBonusPts(winner === teamA ? raw.teamAOvers : raw.teamBOvers)
+    marginBonus[winner] = bonus
+    marginBonus[loser] = -bonus
   }
 
   return {
@@ -336,25 +338,28 @@ export function computeMatchAdvantage(data, slot, matchType, matchId) {
 
 // Margin bonus for a single stored result — reads the net-score fields ResultModal writes
 // at save time (see resolveMatch), so no advantage context needs to be reconstructed here.
-// Winner-only per section 10: there is no penalty subtracted from the losing team.
+// The winning team earns the bonus AND the losing team concedes the same amount as negative
+// points — this app's own long-standing rule, kept deliberately even though the rulebook
+// text only spells out the winner's side of it.
 export function marginBonusForResult(result) {
-  if (!result || !result.winner) return {}
-  if (result.walkover) return { [result.winner]: 2 }
-  if (!isFullOvers(result)) return {}
+  if (!result || !result.winner) return null
+  const loser = result.winner === result.teamA ? result.teamB : result.teamA
+  if (result.walkover) return { winner: result.winner, loser, bonus: 2 }
+  if (!isFullOvers(result)) return null
   const netA = result.netScoreA ?? result.teamAScore
   const netB = result.netScoreB ?? result.teamBScore
-  if (netA == null || netB == null || netA === netB) return {}
+  if (netA == null || netB == null || netA === netB) return null
   const winner = result.winner
   const winnerBattedFirst = winner === result.battingFirst
   const bonus = winnerBattedFirst
     ? marginBonusPts(Math.abs(netA - netB))
     : chaseBonusPts(winner === result.teamA ? result.teamAOvers : result.teamBOvers)
-  return bonus > 0 ? { [winner]: bonus } : {}
+  return bonus > 0 ? { winner, loser, bonus } : null
 }
 
 export function computePointsTable(data) {
   const table = {}
-  data.teams.forEach((t) => (table[t.id] = { placement: 0, marginBonus: 0, punctuality: 0, wins: 0, runnerUp: 0, third: 0, slotsPlayed: 0 }))
+  data.teams.forEach((t) => (table[t.id] = { placement: 0, marginBonusFor: 0, marginBonusAgainst: 0, punctuality: 0, wins: 0, runnerUp: 0, third: 0, slotsPlayed: 0 }))
   const allLeagueResults = []
   data.slots.forEach((slot) => {
     if (slot.abandonment) {
@@ -379,8 +384,11 @@ export function computePointsTable(data) {
     slot.matches.forEach((m) => {
       if (!m.result) return
       if (m.type === 'league1' || m.type === 'league2' || m.type === 'league3') allLeagueResults.push(m.result)
-      const bonus = marginBonusForResult(m.result)
-      Object.entries(bonus).forEach(([id, pts]) => { if (table[id]) table[id].marginBonus += pts })
+      const mb = marginBonusForResult(m.result)
+      if (mb) {
+        if (table[mb.winner]) table[mb.winner].marginBonusFor += mb.bonus
+        if (table[mb.loser]) table[mb.loser].marginBonusAgainst += mb.bonus
+      }
     })
     const punctuality = computePunctualityBonus(slot)
     Object.entries(punctuality).forEach(([id, pts]) => { if (table[id]) table[id].punctuality += pts })
@@ -388,7 +396,7 @@ export function computePointsTable(data) {
   const seasonNRR = computeNRR(allLeagueResults)
   return data.teams.map((t) => {
     const r = table[t.id]
-    return { team: t, ...r, nrr: seasonNRR[t.id] || 0, total: r.placement + r.marginBonus + r.punctuality }
+    return { team: t, ...r, nrr: seasonNRR[t.id] || 0, total: r.placement + r.marginBonusFor - r.marginBonusAgainst + r.punctuality }
   }).sort((a, b) => (b.total !== a.total ? b.total - a.total : b.nrr - a.nrr))
 }
 

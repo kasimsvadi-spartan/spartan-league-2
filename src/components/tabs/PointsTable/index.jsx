@@ -27,7 +27,8 @@ export function PointsTable({ data }) {
             <div className="flex items-center gap-3 text-right">
               <div className="text-xs" style={{ color: 'var(--muted)' }}>
                 <div>{r.placement} slot pts</div>
-                <div style={{ color: r.marginBonus > 0 ? 'var(--green)' : 'var(--muted)' }}>+{r.marginBonus} margin</div>
+                <div style={{ color: r.marginBonusFor > 0 ? 'var(--green)' : 'var(--muted)' }}>+{r.marginBonusFor} bonus</div>
+                <div style={{ color: r.marginBonusAgainst > 0 ? 'var(--red)' : 'var(--muted)' }}>-{r.marginBonusAgainst} conceded</div>
                 <div style={{ color: r.punctuality > 0 ? 'var(--green)' : 'var(--muted)' }}>+{r.punctuality} punctual</div>
               </div>
               <div className="display text-2xl gold-text w-10">{r.total}</div>
@@ -35,7 +36,7 @@ export function PointsTable({ data }) {
           </Card>
         ))}
       </div>
-      <p className="text-[11px] mt-3 mb-5" style={{ color: 'var(--muted2)' }}>Slot pts: 4 for slot winner, 2 for runner-up, 0 for 3rd, plus 1 for finishing a slot on time with every match full length. Margin bonus (winner only, full 7-over matches): +1 for a 30+ run win or chasing in ≤4 overs; +2 for a 60+ run win or chasing in ≤2 overs. An abandoned slot's 6 points are split by who was willing to play. Ties on points are broken by league-stage Net Run Rate.</p>
+      <p className="text-[11px] mt-3 mb-5" style={{ color: 'var(--muted2)' }}>Slot pts: 4 for slot winner, 2 for runner-up, 0 for 3rd, plus 1 for finishing a slot on time with every match full length. Margin bonus (full 7-over matches): +1 for a 30+ run win or chasing in ≤4 overs; +2 for a 60+ run win or chasing in ≤2 overs — subtracted from the opponent as negative points. An abandoned slot's 6 points are split by who was willing to play. Ties on points are broken by league-stage Net Run Rate.</p>
 
       {progression.length >= 2 && (
         <div>

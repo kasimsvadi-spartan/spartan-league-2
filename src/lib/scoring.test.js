@@ -152,10 +152,10 @@ describe('Abandoned slots — other splits', () => {
   })
 })
 
-describe('Margin bonus is winner-only (section 10 has no penalty for the loser)', () => {
-  it('never puts a negative or deducted figure on the losing team', () => {
+describe('Margin bonus also concedes negative points to the losing team (kept as this app has always scored it)', () => {
+  it('reports the same bonus figure for both the winner and the team that conceded it', () => {
     const result = { teamA: 'A', teamB: 'B', teamAScore: 200, teamBScore: 130, teamAOvers: 7, teamBOvers: 7, battingFirst: 'A', matchOvers: 7, winner: 'A', netScoreA: 200, netScoreB: 130 }
-    expect(marginBonusForResult(result)).toEqual({ A: 2 })
+    expect(marginBonusForResult(result)).toEqual({ winner: 'A', loser: 'B', bonus: 2 })
   })
 })
 
@@ -179,7 +179,7 @@ describe('computePointsTable integration', () => {
   })
 
   it('adds the punctuality bonus into total once every match in the slot is full length', () => {
-    const fullResult = { teamA: 'A', teamB: 'B', teamAScore: 100, teamBScore: 90, teamAOvers: 7, teamBOvers: 7, battingFirst: 'A', matchOvers: 7, winner: 'A', netScoreA: 100, netScoreB: 90 }
+    const fullResult = { teamA: 'A', teamB: 'B', teamAScore: 150, teamBScore: 90, teamAOvers: 7, teamBOvers: 7, battingFirst: 'A', matchOvers: 7, winner: 'A', netScoreA: 150, netScoreB: 90 }
     const data = {
       teams,
       slots: [{
@@ -200,6 +200,8 @@ describe('computePointsTable integration', () => {
     expect(byId.B.punctuality).toBe(1)
     expect(byId.C.punctuality).toBe(1)
     // Final winner (A): 4 placement + 1 punctuality + margin bonus from 2 wins as A.
-    expect(byId.A.total).toBe(byId.A.placement + byId.A.marginBonus + byId.A.punctuality)
+    expect(byId.A.total).toBe(byId.A.placement + byId.A.marginBonusFor - byId.A.marginBonusAgainst + byId.A.punctuality)
+    // B lost as teamB in 2 of those matches, so it should be conceding margin bonus, not just missing out on it.
+    expect(byId.B.marginBonusAgainst).toBeGreaterThan(0)
   })
 })
