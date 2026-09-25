@@ -1,6 +1,8 @@
 import { describe, expect, it } from 'vitest'
 import {
   computeAbandonedSlotPoints,
+  computeHeadToHead,
+  computeLeagueStandings,
   computePointsTable,
   computePunctualityBonus,
   marginBonusForResult,
@@ -203,5 +205,30 @@ describe('computePointsTable integration', () => {
     expect(byId.A.total).toBe(byId.A.placement + byId.A.marginBonusFor - byId.A.marginBonusAgainst + byId.A.punctuality)
     // B lost as teamB in 2 of those matches, so it should be conceding margin bonus, not just missing out on it.
     expect(byId.B.marginBonusAgainst).toBeGreaterThan(0)
+  })
+})
+
+describe('An abandoned slot counts as a resolved outcome elsewhere in the app', () => {
+  const teams = [{ id: 'A', name: 'A' }, { id: 'B', name: 'B' }, { id: 'C', name: 'C' }]
+  const abandonedSlot = {
+    id: 's1', teamIds: ['A', 'B', 'C'], slotType: 'League', abandonment: { willingTeamIds: [], winnerId: null },
+    matches: [{ type: 'league1' }, { type: 'league2' }, { type: 'league3' }, { type: 'qualifier1' }, { type: 'eliminator' }, { type: 'final' }],
+  }
+
+  it('counts toward league-stage completion (computeLeagueStandings), or the Final Slot advantage could never unlock', () => {
+    const { completed } = computeLeagueStandings({ teams, slots: [abandonedSlot] })
+    expect(completed).toBe(1)
+  })
+
+  it('is excluded from head-to-head, since its matches were discarded', () => {
+    const withStaleMatch = {
+      ...abandonedSlot,
+      matches: [
+        { type: 'league1', result: { teamA: 'A', teamB: 'B', winner: 'A' } },
+        ...abandonedSlot.matches.slice(1),
+      ],
+    }
+    const grid = computeHeadToHead({ teams, slots: [withStaleMatch] })
+    expect(grid.A.B.wins).toBe(0)
   })
 })

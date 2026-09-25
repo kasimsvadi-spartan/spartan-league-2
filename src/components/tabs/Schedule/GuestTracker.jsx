@@ -17,10 +17,12 @@ export function GuestTracker({ data, persist, slot, isAdmin }) {
   const guests = slot.guests || {}
   const teamById = (id) => data.teams.find((t) => t.id === id)
 
-  const eligibleNames = data.teams
-    .filter((t) => !slot.teamIds.includes(t.id))
-    .flatMap((t) => (t.players || []).map((p) => p.name))
-    .concat((data.playerPool || []).map((p) => p.name))
+  const eligibleNames = [...new Set(
+    data.teams
+      .filter((t) => !slot.teamIds.includes(t.id))
+      .flatMap((t) => (t.players || []).map((p) => p.name))
+      .concat((data.playerPool || []).map((p) => p.name))
+  )]
 
   function save(next) {
     persist({ ...data, slots: data.slots.map((s) => (s.id !== slot.id ? s : { ...s, guests: next })) })

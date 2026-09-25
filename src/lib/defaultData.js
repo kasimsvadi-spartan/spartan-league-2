@@ -1,5 +1,4 @@
 import { uid } from './uid'
-import { defaultRuleBook } from './defaultRuleBook'
 
 // Seed shape for a brand-new season row. Note: unlike the original artifact, there is no
 // `adminPin` field here — the PIN now lives server-side as a Supabase Edge Function secret
@@ -22,6 +21,5 @@ export function defaultData() {
     polls: {},
     liveScorecardUrl: '',
     playerPool: [],
-    ruleBook: defaultRuleBook(),
   }
 }

@@ -100,8 +100,15 @@ export function ResultModal({ data, persist, slotId, matchId, teamA, teamB, slot
   }
 
   function clearResult() {
-    const slots = data.slots.map((s) => (s.id !== slotId ? s : { ...s, matches: s.matches.map((m) => (m.id !== matchId ? m : { ...m, result: null })) }))
-    persist({ ...data, slots })
+    let next = data
+    // If this match had spent the Final Slot bonus token, clearing its result must release
+    // the token back — otherwise it's stuck "used" forever with no result to show for it.
+    const activation = data.finalSlotAdvantage
+    if (activation && activation.usedInMatchId === matchId) {
+      next = { ...next, finalSlotAdvantage: { ...activation, usedInMatchId: null } }
+    }
+    const slots = next.slots.map((s) => (s.id !== slotId ? s : { ...s, matches: s.matches.map((m) => (m.id !== matchId ? m : { ...m, result: null })) }))
+    persist({ ...next, slots })
     onClose()
   }
 

@@ -220,6 +220,7 @@ export function Schedule({ data, persist, isAdmin, draft, clearDraft }) {
                     {abandonment.willingTeamIds.length === 0 && 'All three teams agreed not to play — 2 points each, no punctuality bonus.'}
                     {abandonment.willingTeamIds.length === 1 && `${teamById(abandonment.willingTeamIds[0])?.name} was the only team willing to play and takes all 6 points.`}
                     {abandonment.willingTeamIds.length === 2 && `${teamById(abandonment.willingTeamIds[0])?.name} and ${teamById(abandonment.willingTeamIds[1])?.name} played each other; ${teamById(abandonment.winnerId)?.name} won (4 pts, loser 2 pts, declined team 0 pts).`}
+                    {abandonment.willingTeamIds.length >= 3 && 'Recorded with all three teams willing — 2 points each, no punctuality bonus.'}
                   </p>
                   {isAdmin && <button onClick={() => clearAbandon(slot.id)} className="plain-btn text-xs px-2.5 py-1 rounded-md">Undo — restore normal scoring</button>}
                 </div>

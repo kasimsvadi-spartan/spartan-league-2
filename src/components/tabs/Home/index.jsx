@@ -17,10 +17,13 @@ import { LeaderBackground } from './LeaderBackground'
 export function Home({ data, persist, isAdmin, setTab }) {
   const table = computePointsTable(data)
   const leader = table[0]
-  const upcoming = data.slots.filter((s) => s.matches.every((m) => !m.result)).sort((a, b) => (a.date || '').localeCompare(b.date || ''))[0]
+  const upcoming = data.slots.filter((s) => !s.abandonment && s.matches.every((m) => !m.result)).sort((a, b) => (a.date || '').localeCompare(b.date || ''))[0]
   const teamById = (id) => data.teams.find((t) => t.id === id)
   const recentResults = []
-  data.slots.forEach((slot) => slot.matches.forEach((m) => { if (m.result) recentResults.push({ slot, m }) }))
+  data.slots.forEach((slot) => {
+    if (slot.abandonment) return
+    slot.matches.forEach((m) => { if (m.result) recentResults.push({ slot, m }) })
+  })
   recentResults.sort((a, b) => (b.slot.date || '').localeCompare(a.slot.date || ''))
   const players = buildPlayerIndex(data)
   const topMvp = sortMvp(players.filter((p) => p.mvp))[0]
@@ -166,7 +169,7 @@ export function Home({ data, persist, isAdmin, setTab }) {
             <p className="text-[10px] uppercase tracking-wide" style={{ color: 'var(--muted)' }}>{MATCH_LABELS[recentResults[0].m.type]}</p>
             <div className="flex items-center justify-between mt-1 text-sm">
               <TeamPill team={teamById(recentResults[0].m.result.teamA)} />
-              <span className="display text-lg gold-text">{recentResults[0].m.result.teamAScore} - {recentResults[0].m.result.teamBScore}</span>
+              <span className="display text-lg gold-text">{recentResults[0].m.result.teamAScore ?? '—'} - {recentResults[0].m.result.teamBScore ?? '—'}</span>
               <TeamPill team={teamById(recentResults[0].m.result.teamB)} />
             </div>
           </Card>

@@ -1,5 +1,8 @@
-// Slot format, bonus points, and NRR — ported verbatim from spartan-league-2.jsx.
-// Do not change this math without re-checking against the original artifact (see Verify step in the project plan).
+// The season's scoring engine — slot placement, margin bonus, NRR, bonus/penalty runs,
+// punctuality, abandoned slots and the Final Slot advantage token — implementing the
+// official SL2 rulebook exactly (src/lib/rulebookContent.js). This is the one place all of
+// that math lives; nothing else should reimplement it. See scoring.test.js for the rulebook's
+// worked test cases.
 
 export const MATCH_LABELS = {
   league1: 'Match 1',
@@ -102,29 +105,31 @@ export function resolveSlot(slot) {
   return { wins, slotNRR, standings, resolvedTeams, leagueComplete }
 }
 
-export function marginInfo(result) {
-  if (!result) return null
-  const { teamA, teamB, teamAScore, teamBScore, battingFirst, winner, chaseOvers } = result
+// Margin/chase info for display (Results tab). Margin and bonus are computed on the net
+// (bonus-run-inclusive) scoreline — the same figures marginBonusForResult feeds into the
+// points table — so this always agrees with the points a match actually earned, including
+// for a qualifier/eliminator/Final Slot match that carried an advantage. Walkovers have no
+// "margin" in this sense; callers should check result.walkover separately.
+export function netMarginInfo(result) {
+  if (!result || result.walkover) return null
   const full = isFullOvers(result)
-  if (teamAScore === teamBScore) {
+  const netA = result.netScoreA ?? result.teamAScore
+  const netB = result.netScoreB ?? result.teamBScore
+  if (netA == null || netB == null || netA === netB) {
     if (result.superOver) {
-      const loser = winner === teamA ? teamB : teamA
-      return { type: 'superover', winner, loser, bonus: 0, full }
+      const loser = result.winner === result.teamA ? result.teamB : result.teamA
+      return { type: 'superover', winner: result.winner, loser, bonus: 0, full }
     }
     return { type: 'tie', full }
   }
-  const loser = winner === teamA ? teamB : teamA
-  const winnerBattedFirst = battingFirst === winner
+  const winner = result.winner
+  const loser = winner === result.teamA ? result.teamB : result.teamA
+  const winnerBattedFirst = winner === result.battingFirst
   if (winnerBattedFirst) {
-    const margin = Math.abs(teamAScore - teamBScore)
+    const margin = Math.abs(netA - netB)
     return { type: 'runs', margin, bonus: full ? marginBonusPts(margin) : 0, winner, loser, full }
   }
-  let overs = null
-  if (result.teamAOvers != null && result.teamBOvers != null) {
-    overs = winner === teamA ? result.teamAOvers : result.teamBOvers
-  } else if (chaseOvers != null) {
-    overs = Number(chaseOvers)
-  }
+  const overs = winner === result.teamA ? result.teamAOvers : result.teamBOvers
   return { type: 'chase', overs, bonus: full && overs != null ? chaseBonusPts(overs) : 0, winner, loser, full }
 }
 
@@ -133,7 +138,7 @@ export function marginInfo(result) {
 //
 // The qualifier and eliminator each hand a 10-run advantage to a specific team, and the
 // Final Slot's saved 1st-place bonus (also 10 runs, admin-activated — see
-// computeFinalSlotAdvantage below) can stack on top of the qualifier advantage for the same
+// computeFinalSlotAdvantageHolder below) can stack on top of the qualifier advantage for the same
 // team in the same match, hence `amount` rather than a hardcoded 10. The runs are never
 // attributed to a batsman: whichever team bats first has its gross score adjusted (up if it
 // holds the advantage, down if its opponent does); the team batting second is untouched
@@ -403,7 +408,10 @@ export function computePointsTable(data) {
 export function computeLeagueStandings(data) {
   const leagueSlots = data.slots.filter((s) => (s.slotType || 'League') === 'League')
   const table = computePointsTable({ ...data, slots: leagueSlots })
-  const completed = leagueSlots.filter((s) => s.matches.every((m) => m.result)).length
+  // An abandoned slot is a resolved outcome too (its points are locked in) — it must count
+  // toward "the league stage is complete", or a single abandoned slot would permanently
+  // block that from ever being true (see computeFinalSlotAdvantageHolder, which gates on it).
+  const completed = leagueSlots.filter((s) => s.abandonment || s.matches.every((m) => m.result)).length
   return { table, completed, total: LEAGUE_SLOTS_TOTAL, leagueSlots }
 }
 
@@ -417,7 +425,7 @@ export function computeChampion(data) {
 
 // Cumulative points/NRR for every team after each completed slot, in chronological order — for the progress chart.
 export function computeProgressionData(data) {
-  const completed = [...data.slots].filter((s) => s.matches.every((m) => m.result)).sort((a, b) => (a.date || '').localeCompare(b.date || ''))
+  const completed = [...data.slots].filter((s) => s.abandonment || s.matches.every((m) => m.result)).sort((a, b) => (a.date || '').localeCompare(b.date || ''))
   if (completed.length < 2) return []
   return completed.map((_, i) => {
     const upToHere = { ...data, slots: completed.slice(0, i + 1) }
@@ -431,12 +439,15 @@ export function computeProgressionData(data) {
 export function computeHeadToHead(data) {
   const grid = {}
   data.teams.forEach((a) => { grid[a.id] = {}; data.teams.forEach((b) => { if (a.id !== b.id) grid[a.id][b.id] = { wins: 0, losses: 0 } }) })
-  data.slots.forEach((slot) => slot.matches.forEach((m) => {
-    if (!m.result) return
-    const { teamA, teamB, winner } = m.result
-    const loser = winner === teamA ? teamB : teamA
-    if (grid[winner] && grid[winner][loser]) grid[winner][loser].wins++
-    if (grid[loser] && grid[loser][winner]) grid[loser][winner].losses++
-  }))
+  data.slots.forEach((slot) => {
+    if (slot.abandonment) return // matches discarded — see computePointsTable
+    slot.matches.forEach((m) => {
+      if (!m.result) return
+      const { teamA, teamB, winner } = m.result
+      const loser = winner === teamA ? teamB : teamA
+      if (grid[winner] && grid[winner][loser]) grid[winner][loser].wins++
+      if (grid[loser] && grid[loser][winner]) grid[loser][winner].losses++
+    })
+  })
   return grid
 }
