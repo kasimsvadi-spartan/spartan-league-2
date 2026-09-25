@@ -130,7 +130,7 @@ export function marginInfo(result) {
 
 export function computePointsTable(data) {
   const table = {}
-  data.teams.forEach((t) => (table[t.id] = { placement: 0, bonusFor: 0, bonusAgainst: 0, timePenalty: 0, wins: 0, runnerUp: 0, third: 0, slotsPlayed: 0 }))
+  data.teams.forEach((t) => (table[t.id] = { placement: 0, bonusFor: 0, bonusAgainst: 0, wins: 0, runnerUp: 0, third: 0, slotsPlayed: 0 }))
   const allLeagueResults = []
   data.slots.forEach((slot) => {
     const { resolvedTeams } = resolveSlot(slot)
@@ -153,19 +153,12 @@ export function computePointsTable(data) {
         if (table[info.winner]) table[info.winner].bonusFor += info.bonus
         if (table[info.loser]) table[info.loser].bonusAgainst += info.bonus
       }
-      // Optional, toggleable rule (data.timePenaltyEnabled): both teams lose 1 point if a
-      // match overran its allotted time. The fact is recorded on the result regardless of
-      // the toggle so flipping the rule on/off later re-scores existing matches correctly.
-      if (data.timePenaltyEnabled && m.result.overTime) {
-        if (table[m.result.teamA]) table[m.result.teamA].timePenalty += 1
-        if (table[m.result.teamB]) table[m.result.teamB].timePenalty += 1
-      }
     })
   })
   const seasonNRR = computeNRR(allLeagueResults)
   return data.teams.map((t) => {
     const r = table[t.id]
-    return { team: t, ...r, nrr: seasonNRR[t.id] || 0, total: r.placement + r.bonusFor - r.bonusAgainst - r.timePenalty }
+    return { team: t, ...r, nrr: seasonNRR[t.id] || 0, total: r.placement + r.bonusFor - r.bonusAgainst }
   }).sort((a, b) => (b.total !== a.total ? b.total - a.total : b.nrr - a.nrr))
 }
 

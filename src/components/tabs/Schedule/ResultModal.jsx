@@ -13,7 +13,6 @@ export function ResultModal({ data, persist, slotId, matchId, teamA, teamB, exis
   const [useSuperOver, setUseSuperOver] = useState(!!(existing && existing.superOver))
   const [soScoreA, setSoScoreA] = useState(existing && existing.superOver ? String(existing.superOver.teamAScore) : '')
   const [soScoreB, setSoScoreB] = useState(existing && existing.superOver ? String(existing.superOver.teamBScore) : '')
-  const [overTime, setOverTime] = useState(!!(existing && existing.overTime))
   const [err, setErr] = useState('')
 
   function save() {
@@ -36,7 +35,6 @@ export function ResultModal({ data, persist, slotId, matchId, teamA, teamB, exis
       battingFirst, winner: winnerId,
       matchOvers: shortened ? Number(matchOvers) || 7 : 7,
       superOver,
-      overTime,
     }
     const slots = data.slots.map((s) => (s.id !== slotId ? s : { ...s, matches: s.matches.map((m) => (m.id !== matchId ? m : { ...m, result })) }))
     persist({ ...data, slots })
@@ -98,18 +96,6 @@ export function ResultModal({ data, persist, slotId, matchId, teamA, teamB, exis
             <div><label className="text-[10px]" style={{ color: 'var(--muted2)' }}>{teamA.name} Super Over</label><input inputMode="numeric" value={soScoreA} onChange={(e) => setSoScoreA(e.target.value)} className="field w-full mt-1 px-3 py-2 text-sm" /></div>
             <div><label className="text-[10px]" style={{ color: 'var(--muted2)' }}>{teamB.name} Super Over</label><input inputMode="numeric" value={soScoreB} onChange={(e) => setSoScoreB(e.target.value)} className="field w-full mt-1 px-3 py-2 text-sm" /></div>
           </div>
-        )}
-
-        <label className="flex items-center gap-2 text-sm mb-2">
-          <input type="checkbox" checked={overTime} onChange={(e) => setOverTime(e.target.checked)} style={{ accentColor: 'var(--gold)' }} />
-          Match exceeded the allotted time
-        </label>
-        {overTime && (
-          <p className="text-[11px] mb-3" style={{ color: data.timePenaltyEnabled ? 'var(--red)' : 'var(--muted2)' }}>
-            {data.timePenaltyEnabled
-              ? 'Time penalty rule is ON — 1 point will be deducted from both teams for this match.'
-              : "Time penalty rule is currently OFF, so this has no effect on points yet. Turn it on in Rules if it's needed."}
-          </p>
         )}
 
         {err && <p className="text-xs mb-2" style={{ color: 'var(--red)' }}>{err}</p>}

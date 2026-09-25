@@ -1,17 +1,16 @@
 import { useEffect, useState } from 'react'
-import { Clock, ScrollText, Search, X } from 'lucide-react'
+import { ScrollText, Search, X } from 'lucide-react'
 import { RULEBOOK_AUTHOR, RULEBOOK_SECTIONS, RULEBOOK_UPDATED, RULEBOOK_VERSION } from '../../../lib/rulebookContent'
 import { Card } from '../../layout/Card'
 import { SectionTitle } from '../../layout/SectionTitle'
 import { RuleSection } from './RuleSection'
 import { sectionMatches } from './rulebookSearch'
 
-export function Rules({ data, persist, isAdmin }) {
+export function Rules() {
   const [query, setQuery] = useState('')
   const [openIds, setOpenIds] = useState(() => new Set())
   const [headerH, setHeaderH] = useState(0)
   const searching = query.trim().length > 0
-  const timePenaltyEnabled = !!data.timePenaltyEnabled
 
   // The sticky search bar needs to dock just below the app's own sticky header rather than
   // under it — the header's height isn't fixed (it reflows with title wrapping at narrow
@@ -44,10 +43,6 @@ export function Rules({ data, persist, isAdmin }) {
     setTimeout(() => {
       document.getElementById(section.id)?.scrollIntoView({ behavior: 'smooth', block: 'start' })
     }, 0)
-  }
-
-  function setTimePenaltyEnabled(v) {
-    persist({ ...data, timePenaltyEnabled: v })
   }
 
   return (
@@ -96,32 +91,6 @@ export function Rules({ data, persist, isAdmin }) {
       {visibleSections.map((s) => (
         <RuleSection key={s.id} section={s} open={searching || openIds.has(s.id)} onToggle={() => toggle(s.id)} query={query} />
       ))}
-
-      <Card className="mt-4">
-        <div className="flex items-center justify-between gap-3">
-          <div className="flex items-center gap-2.5">
-            <Clock size={18} color={timePenaltyEnabled ? 'var(--gold)' : 'var(--muted)'} />
-            <div>
-              <p className="text-sm font-semibold">Time Penalty Rule</p>
-              <p className="text-[11px]" style={{ color: 'var(--muted2)' }}>Both teams lose 1 point if their match overruns the allotted time.</p>
-            </div>
-          </div>
-          {isAdmin ? (
-            <button
-              onClick={() => setTimePenaltyEnabled(!timePenaltyEnabled)}
-              className="px-3 py-1.5 rounded-full text-xs font-semibold shrink-0"
-              style={timePenaltyEnabled ? { background: 'var(--gold)', color: '#1A1409' } : { border: '1px solid var(--hair2)', color: 'var(--muted)' }}
-            >
-              {timePenaltyEnabled ? 'ON' : 'OFF'}
-            </button>
-          ) : (
-            <span className="text-xs font-semibold shrink-0" style={{ color: timePenaltyEnabled ? 'var(--gold)' : 'var(--muted)' }}>{timePenaltyEnabled ? 'ON' : 'OFF'}</span>
-          )}
-        </div>
-        <p className="text-[10px] mt-2" style={{ color: 'var(--faint)' }}>
-          Legacy toggle, kept for compatibility — not part of the official rulebook above. Section 11 there defines the adopted punctuality rule (a shared +1 bonus for finishing on time, not a deduction).
-        </p>
-      </Card>
     </div>
   )
 }
