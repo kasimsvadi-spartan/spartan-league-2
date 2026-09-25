@@ -295,12 +295,76 @@ export function resolveAdvantageAmount(finalSlotBonus, activatedForMatchId, matc
   return { teamId: null, amount: 0 }
 }
 
+// The league-stage table leader is who the Final Slot bonus belongs to — derived live from
+// standings rather than stored, so it can never drift from the table itself. Only resolved
+// once the league stage (all 21 league slots) is actually complete.
+export function computeFinalSlotAdvantageHolder(data) {
+  const { table, completed, total } = computeLeagueStandings(data)
+  if (completed < total || table.length === 0) return null
+  return table[0].team.id
+}
+
+// The single source of truth for "does this match carry a run advantage, for whom, and how
+// much" — used both by ResultModal (to compute the net score when a result is saved) and by
+// anything that wants to preview it before a result exists. Round-robin matches never carry
+// one; the qualifier and eliminator carry the standard 10-run advantage automatically from
+// the slot's own seeding; the Final Slot's saved bonus (if currently activated for this
+// match) can stack on top of the qualifier advantage.
+export function computeMatchAdvantage(data, slot, matchType, matchId) {
+  if (matchType === 'league1' || matchType === 'league2' || matchType === 'league3') {
+    return { teamId: null, amount: 0 }
+  }
+  const { standings } = resolveSlot(slot)
+  const q1 = slot.matches.find((m) => m.type === 'qualifier1')
+  let autoTeamId = null
+  if (matchType === 'qualifier1') autoTeamId = standings ? standings[0] : null
+  if (matchType === 'eliminator' && q1 && q1.result) {
+    autoTeamId = q1.result.winner === q1.result.teamA ? q1.result.teamB : q1.result.teamA
+  }
+  if ((slot.slotType || 'League') !== 'Final') {
+    return autoTeamId ? { teamId: autoTeamId, amount: 10 } : { teamId: null, amount: 0 }
+  }
+  if (matchType === 'final') return autoTeamId ? { teamId: autoTeamId, amount: 10 } : { teamId: null, amount: 0 }
+  // `data.finalSlotAdvantage` only ever persists the admin's activation choice — who holds
+  // the bonus is always re-derived live from standings (computeFinalSlotAdvantageHolder),
+  // so it can never go stale if a result gets corrected after the fact.
+  const holderId = computeFinalSlotAdvantageHolder(data)
+  const activation = data.finalSlotAdvantage || null
+  const finalSlotBonus = holderId ? { teamId: holderId, usedInMatchId: activation?.usedInMatchId || null } : null
+  return resolveAdvantageAmount(finalSlotBonus, activation?.activatedForMatchId ?? null, matchId, autoTeamId)
+}
+
+// Margin bonus for a single stored result — reads the net-score fields ResultModal writes
+// at save time (see resolveMatch), so no advantage context needs to be reconstructed here.
+// Winner-only per section 10: there is no penalty subtracted from the losing team.
+export function marginBonusForResult(result) {
+  if (!result || !result.winner) return {}
+  if (result.walkover) return { [result.winner]: 2 }
+  if (!isFullOvers(result)) return {}
+  const netA = result.netScoreA ?? result.teamAScore
+  const netB = result.netScoreB ?? result.teamBScore
+  if (netA == null || netB == null || netA === netB) return {}
+  const winner = result.winner
+  const winnerBattedFirst = winner === result.battingFirst
+  const bonus = winnerBattedFirst
+    ? marginBonusPts(Math.abs(netA - netB))
+    : chaseBonusPts(winner === result.teamA ? result.teamAOvers : result.teamBOvers)
+  return bonus > 0 ? { [winner]: bonus } : {}
+}
+
 export function computePointsTable(data) {
   const table = {}
-  data.teams.forEach((t) => (table[t.id] = { placement: 0, bonusFor: 0, bonusAgainst: 0, wins: 0, runnerUp: 0, third: 0, slotsPlayed: 0 }))
+  data.teams.forEach((t) => (table[t.id] = { placement: 0, marginBonus: 0, punctuality: 0, wins: 0, runnerUp: 0, third: 0, slotsPlayed: 0 }))
   const allLeagueResults = []
   data.slots.forEach((slot) => {
-    const { resolvedTeams } = resolveSlot(slot)
+    if (slot.abandonment) {
+      // Section 10 "Abandoned slots": the whole slot carries 6 points total, split by who
+      // was willing to play — any matches completed before the abandonment are discarded,
+      // and no punctuality bonus is awarded either way.
+      const pts = computeAbandonedSlotPoints(slot.teamIds, slot.abandonment.willingTeamIds || [], slot.abandonment.winnerId || null)
+      Object.entries(pts).forEach(([id, p]) => { if (table[id]) { table[id].placement += p; table[id].slotsPlayed++ } })
+      return
+    }
     const fn = slot.matches.find((m) => m.type === 'final')
     const el = slot.matches.find((m) => m.type === 'eliminator')
     if (fn && fn.result) {
@@ -315,17 +379,16 @@ export function computePointsTable(data) {
     slot.matches.forEach((m) => {
       if (!m.result) return
       if (m.type === 'league1' || m.type === 'league2' || m.type === 'league3') allLeagueResults.push(m.result)
-      const info = marginInfo(m.result)
-      if (info && (info.type === 'runs' || info.type === 'chase') && info.bonus > 0) {
-        if (table[info.winner]) table[info.winner].bonusFor += info.bonus
-        if (table[info.loser]) table[info.loser].bonusAgainst += info.bonus
-      }
+      const bonus = marginBonusForResult(m.result)
+      Object.entries(bonus).forEach(([id, pts]) => { if (table[id]) table[id].marginBonus += pts })
     })
+    const punctuality = computePunctualityBonus(slot)
+    Object.entries(punctuality).forEach(([id, pts]) => { if (table[id]) table[id].punctuality += pts })
   })
   const seasonNRR = computeNRR(allLeagueResults)
   return data.teams.map((t) => {
     const r = table[t.id]
-    return { team: t, ...r, nrr: seasonNRR[t.id] || 0, total: r.placement + r.bonusFor - r.bonusAgainst }
+    return { team: t, ...r, nrr: seasonNRR[t.id] || 0, total: r.placement + r.marginBonus + r.punctuality }
   }).sort((a, b) => (b.total !== a.total ? b.total - a.total : b.nrr - a.nrr))
 }
 

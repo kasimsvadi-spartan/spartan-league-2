@@ -1,7 +1,9 @@
 import { describe, expect, it } from 'vitest'
 import {
   computeAbandonedSlotPoints,
+  computePointsTable,
   computePunctualityBonus,
+  marginBonusForResult,
   marginBonusPts,
   resolveAdvantageAmount,
   resolveMatch,
@@ -147,5 +149,57 @@ describe('Abandoned slots — other splits', () => {
   })
   it('awards all 6 to the single willing team', () => {
     expect(computeAbandonedSlotPoints(['A', 'B', 'C'], ['A'])).toEqual({ A: 6, B: 0, C: 0 })
+  })
+})
+
+describe('Margin bonus is winner-only (section 10 has no penalty for the loser)', () => {
+  it('never puts a negative or deducted figure on the losing team', () => {
+    const result = { teamA: 'A', teamB: 'B', teamAScore: 200, teamBScore: 130, teamAOvers: 7, teamBOvers: 7, battingFirst: 'A', matchOvers: 7, winner: 'A', netScoreA: 200, netScoreB: 130 }
+    expect(marginBonusForResult(result)).toEqual({ A: 2 })
+  })
+})
+
+describe('computePointsTable integration', () => {
+  const teams = [{ id: 'A', name: 'A' }, { id: 'B', name: 'B' }, { id: 'C', name: 'C' }]
+
+  it('credits an abandoned slot\'s 6-point split without touching the other teams\' win/loss counters', () => {
+    const data = {
+      teams,
+      slots: [{
+        id: 's1', teamIds: ['A', 'B', 'C'], abandonment: { willingTeamIds: ['A', 'B'], winnerId: 'A' },
+        matches: [{ type: 'league1' }, { type: 'league2' }, { type: 'league3' }, { type: 'qualifier1' }, { type: 'eliminator' }, { type: 'final' }],
+      }],
+    }
+    const table = computePointsTable(data)
+    const byId = Object.fromEntries(table.map((r) => [r.team.id, r]))
+    expect(byId.A.placement).toBe(4)
+    expect(byId.B.placement).toBe(2)
+    expect(byId.C.placement).toBe(0)
+    expect(byId.A.wins).toBe(0) // not a real Final win, so it doesn't count as one
+  })
+
+  it('adds the punctuality bonus into total once every match in the slot is full length', () => {
+    const fullResult = { teamA: 'A', teamB: 'B', teamAScore: 100, teamBScore: 90, teamAOvers: 7, teamBOvers: 7, battingFirst: 'A', matchOvers: 7, winner: 'A', netScoreA: 100, netScoreB: 90 }
+    const data = {
+      teams,
+      slots: [{
+        id: 's1', teamIds: ['A', 'B', 'C'], finishedOnTime: true,
+        matches: [
+          { type: 'league1', result: { ...fullResult, teamA: 'A', teamB: 'B' } },
+          { type: 'league2', result: { ...fullResult, teamA: 'B', teamB: 'C', winner: 'B' } },
+          { type: 'league3', result: { ...fullResult, teamA: 'C', teamB: 'A', winner: 'C' } },
+          { type: 'qualifier1', result: { ...fullResult, teamA: 'A', teamB: 'B' } },
+          { type: 'eliminator', result: { ...fullResult, teamA: 'B', teamB: 'C', winner: 'B' } },
+          { type: 'final', result: { ...fullResult, teamA: 'A', teamB: 'B' } },
+        ],
+      }],
+    }
+    const table = computePointsTable(data)
+    const byId = Object.fromEntries(table.map((r) => [r.team.id, r]))
+    expect(byId.A.punctuality).toBe(1)
+    expect(byId.B.punctuality).toBe(1)
+    expect(byId.C.punctuality).toBe(1)
+    // Final winner (A): 4 placement + 1 punctuality + margin bonus from 2 wins as A.
+    expect(byId.A.total).toBe(byId.A.placement + byId.A.marginBonus + byId.A.punctuality)
   })
 })
