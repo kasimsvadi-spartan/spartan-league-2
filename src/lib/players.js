@@ -18,6 +18,16 @@ export function findTeamByName(teams, rawName) {
   return teams.find((t) => t.name.trim().toLowerCase() === n) || null
 }
 
+// The parent team of a named player, if they're on any squad — used by the guest tracker to
+// flag a guest whose own parent team is one of the three teams already in a slot, which the
+// rulebook (section 8) doesn't allow: "A player may not guest in a slot in which his parent
+// team is playing."
+export function parentTeamOf(teams, name) {
+  const n = normName(name)
+  if (!n) return null
+  return teams.find((t) => (t.players || []).some((p) => normName(p.name) === n)) || null
+}
+
 export function playerKey(name, teamRaw) {
   return normName(name) + '|' + normTeam(teamRaw)
 }

@@ -10,6 +10,7 @@ import { ConfirmModal } from '../../layout/ConfirmModal'
 import { TeamLogo } from '../../shared/TeamLogo'
 import { TeamPill } from '../../shared/TeamPill'
 import { ResultModal } from './ResultModal'
+import { GuestTracker } from './GuestTracker'
 
 const MATCH_ORDER = ['league1', 'league2', 'league3', 'qualifier1', 'eliminator', 'final']
 
@@ -305,6 +306,7 @@ export function Schedule({ data, persist, isAdmin, draft, clearDraft }) {
                   )
                 })}
               </div>
+              <GuestTracker data={data} persist={persist} slot={slot} isAdmin={isAdmin} />
               {isAdmin && (
                 <div className="mt-3 pt-3" style={{ borderTop: '1px solid var(--hair3)' }}>
                   <div className="flex items-center gap-3 flex-wrap mb-2">
