@@ -1,5 +1,5 @@
 import { Star } from 'lucide-react'
-import { findTeamByName, normName } from '../../../lib/players'
+import { findPoolPhoto, findTeamByName, normName } from '../../../lib/players'
 import { Card } from '../../layout/Card'
 import { PlayerAvatar } from '../../shared/PlayerAvatar'
 import { TeamPill } from '../../shared/TeamPill'
@@ -21,6 +21,10 @@ export function SpartanOfSlot({ data }) {
 
   const team = findTeamByName(data.teams, top.team_name)
   const squadPlayer = team ? team.players.find((sp) => normName(sp.name) === normName(top.name)) : null
+  // The CricHeroes import only ever gives a name, never a photo — the squad roster usually
+  // has one, and the Player Pool (every real person passes through it) is the fallback, same
+  // as Leaders/Rewards/Teams do for the same reason.
+  const photoUrl = (squadPlayer && squadPlayer.photoUrl) || findPoolPhoto(data.playerPool, top.name)
 
   return (
     <Card className="text-center py-6" style={{ borderColor: 'var(--gold)' }}>
@@ -28,7 +32,7 @@ export function SpartanOfSlot({ data }) {
         <Star size={12} color="var(--gold)" /> Spartan of the Slot
       </p>
       <div className="flex justify-center mt-3 mb-2">
-        <PlayerAvatar player={squadPlayer || { name: top.name }} team={team} size={88} />
+        <PlayerAvatar player={{ name: top.name, photoUrl }} team={team} size={88} />
       </div>
       <p className="display text-2xl gold-text mt-1">{top.name}</p>
       {team && <div className="flex justify-center mt-1"><TeamPill team={team} /></div>}
