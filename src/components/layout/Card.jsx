@@ -1,3 +1,3 @@
-export function Card({ children, className = '', style = {} }) {
-  return <div className={`ember-card ${className}`} style={style}>{children}</div>
+export function Card({ children, className = '', style = {}, ...rest }) {
+  return <div className={`ember-card ${className}`} style={style} {...rest}>{children}</div>
 }

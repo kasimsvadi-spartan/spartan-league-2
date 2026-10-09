@@ -1,3 +1,4 @@
+import { useState } from 'react'
 import { BarChart3, Trophy } from 'lucide-react'
 import { CartesianGrid, Line, LineChart, ResponsiveContainer, Tooltip, XAxis, YAxis } from 'recharts'
 import { computePointsTable, computeProgressionData } from '../../../lib/scoring'
@@ -5,8 +6,10 @@ import { Card } from '../../layout/Card'
 import { SectionTitle } from '../../layout/SectionTitle'
 import { Empty } from '../../layout/Empty'
 import { TeamLogo } from '../../shared/TeamLogo'
+import { TeamModal } from '../../shared/TeamModal'
 
 export function PointsTable({ data }) {
+  const [selectedTeamId, setSelectedTeamId] = useState(null)
   const rows = computePointsTable(data)
   const progression = computeProgressionData(data)
   if (data.slots.length === 0) return <Empty title="No matches yet" body="Create fixtures and enter results to see the points table fill up." />
@@ -15,7 +18,7 @@ export function PointsTable({ data }) {
       <SectionTitle icon={Trophy}>Points Table</SectionTitle>
       <div className="space-y-2">
         {rows.map((r, i) => (
-          <Card key={r.team.id} className="flex items-center justify-between">
+          <Card key={r.team.id} className="flex items-center justify-between cursor-pointer" onClick={() => setSelectedTeamId(r.team.id)}>
             <div className="flex items-center gap-3">
               <span className="display text-xl w-6" style={{ color: 'var(--muted)' }}>{i + 1}</span>
               <TeamLogo team={r.team} size={44} />
@@ -36,7 +39,8 @@ export function PointsTable({ data }) {
           </Card>
         ))}
       </div>
-      <p className="text-[11px] mt-3 mb-5" style={{ color: 'var(--muted2)' }}>Slot pts: 4 for slot winner, 2 for runner-up, 0 for 3rd, plus 1 for finishing a slot on time with every match full length. Margin bonus (full 7-over matches): +1 for a 30+ run win or chasing in ≤4 overs; +2 for a 60+ run win or chasing in ≤2 overs — subtracted from the opponent as negative points. An abandoned slot's 6 points are split by who was willing to play. Ties on points are broken by league-stage Net Run Rate.</p>
+      <p className="text-[11px] mt-3 mb-1" style={{ color: 'var(--faint)' }}>Tap a team for its full stats.</p>
+      <p className="text-[11px] mb-5" style={{ color: 'var(--muted2)' }}>Slot pts: 4 for slot winner, 2 for runner-up, 0 for 3rd, plus 1 for finishing a slot on time with every match full length. Margin bonus (full 7-over matches): +1 for a 30+ run win or chasing in ≤4 overs; +2 for a 60+ run win or chasing in ≤2 overs — subtracted from the opponent as negative points. An abandoned slot's 6 points are split by who was willing to play. Ties on points are broken by league-stage Net Run Rate.</p>
 
       {progression.length >= 2 && (
         <div>
@@ -60,6 +64,14 @@ export function PointsTable({ data }) {
             </div>
           </Card>
         </div>
+      )}
+      {selectedTeamId && (
+        <TeamModal
+          data={data}
+          row={rows.find((r) => r.team.id === selectedTeamId)}
+          rank={rows.findIndex((r) => r.team.id === selectedTeamId) + 1}
+          onClose={() => setSelectedTeamId(null)}
+        />
       )}
     </div>
   )

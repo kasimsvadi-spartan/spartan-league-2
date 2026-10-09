@@ -3,10 +3,11 @@
 // Draft category (A-I), one per team per category - the same convention Season 1 used.
 export const CATEGORY_LETTERS = ['A', 'B', 'C', 'D', 'E', 'F', 'G', 'H', 'I']
 
-// CricHeroes team names have a "SL#" slot suffix (e.g. "MMT RANGERS SL1") that must be
-// stripped before matching against our own team names.
+// CricHeroes team names carry a season suffix — "MMT RANGERS SL1" in older exports,
+// "MMT RANGERS (SL2)" in current ones — that must be stripped before matching against our
+// own team names.
 export function normTeam(s) {
-  return (s || '').replace(/\s*SL\s*\d+\s*$/i, '').trim().toLowerCase()
+  return (s || '').replace(/\s*\(?\s*SL\s*\d+\s*\)?\s*$/i, '').trim().toLowerCase()
 }
 
 export function normName(s) {
