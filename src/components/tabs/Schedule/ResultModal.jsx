@@ -19,7 +19,19 @@ export function ResultModal({ data, persist, slotId, matchId, teamA, teamB, slot
   const [soScoreB, setSoScoreB] = useState(existing && existing.superOver ? String(existing.superOver.teamBScore) : '')
   const [err, setErr] = useState('')
 
-  const advantage = slot && matchType ? computeMatchAdvantage(data, slot, matchType, matchId) : { teamId: null, amount: 0 }
+  // The automatic advantage follows the rulebook, but the admin can override it by hand for
+  // the knockout matches (e.g. when the league's own ruling differs from the automatic one).
+  // A manual setting replaces the automatic one entirely: who gets it, and how many runs.
+  const canOverride = matchType && !['league1', 'league2', 'league3'].includes(matchType)
+  const [manual, setManual] = useState(
+    existing && existing.advantageManual
+      ? { teamId: existing.advantageTeamId || '', amount: String(existing.advantageAmount ?? 10) }
+      : null
+  )
+  const autoAdvantage = slot && matchType ? computeMatchAdvantage(data, slot, matchType, matchId) : { teamId: null, amount: 0 }
+  const advantage = manual
+    ? { teamId: manual.teamId || null, amount: manual.teamId ? Math.max(0, Number(manual.amount) || 0) : 0 }
+    : autoAdvantage
   const advantageTeam = advantage.teamId === teamA.id ? teamA : advantage.teamId === teamB.id ? teamB : null
 
   const firstId = battingFirst
@@ -49,7 +61,7 @@ export function ResultModal({ data, persist, slotId, matchId, teamA, teamB, slot
         battingFirst, winner: secondId,
         matchOvers: shortened ? Number(matchOvers) || 7 : 7,
         superOver: null, walkover: true,
-        advantageTeamId: advantage.teamId, advantageAmount: advantage.amount, bonusRunsApplied: bonusAdj,
+        advantageTeamId: advantage.teamId, advantageAmount: advantage.amount, advantageManual: !!manual, bonusRunsApplied: bonusAdj,
         netScoreA: firstId === teamA.id ? firstNet : null,
         netScoreB: firstId === teamB.id ? firstNet : null,
       }
@@ -81,7 +93,7 @@ export function ResultModal({ data, persist, slotId, matchId, teamA, teamB, slot
         battingFirst, winner: winnerId,
         matchOvers: shortened ? Number(matchOvers) || 7 : 7,
         superOver, walkover: false,
-        advantageTeamId: advantage.teamId, advantageAmount: advantage.amount, bonusRunsApplied: bonusAdj,
+        advantageTeamId: advantage.teamId, advantageAmount: advantage.amount, advantageManual: !!manual, bonusRunsApplied: bonusAdj,
         netScoreA: firstId === teamA.id ? firstNet : secondNet,
         netScoreB: firstId === teamB.id ? firstNet : secondNet,
       }
@@ -89,9 +101,10 @@ export function ResultModal({ data, persist, slotId, matchId, teamA, teamB, slot
 
     let next = data
     // If this match was carrying the activated Final Slot bonus, saving its result spends
-    // the one-use token permanently — section 9, "the bonus can be used once only".
+    // the one-use token permanently — section 9, "the bonus can be used once only". A manual
+    // bonus setting is the admin's own call, so it leaves the token alone.
     const activation = data.finalSlotAdvantage
-    if (activation && activation.activatedForMatchId === matchId && !activation.usedInMatchId) {
+    if (!manual && activation && activation.activatedForMatchId === matchId && !activation.usedInMatchId) {
       next = { ...next, finalSlotAdvantage: { ...activation, usedInMatchId: matchId } }
     }
     const slots = next.slots.map((s) => (s.id !== slotId ? s : { ...s, matches: s.matches.map((m) => (m.id !== matchId ? m : { ...m, result })) }))
@@ -127,6 +140,37 @@ export function ResultModal({ data, persist, slotId, matchId, teamA, teamB, slot
               <strong style={{ color: 'var(--gold-light)' }}>{advantageTeam.name}</strong> holds a {advantage.amount}-run advantage this match{advantage.amount === 20 ? ' (qualifier advantage + saved Final Slot bonus, stacked)' : ''}.
               {' '}{advantageTeam.id === battingFirst ? `${advantage.amount} runs are added to their score.` : `Whoever bats first starts on minus ${advantage.amount}.`}
             </p>
+          </div>
+        )}
+
+        {canOverride && (
+          <div className="mb-3 px-2.5 py-2 rounded-md" style={{ border: '1px dashed var(--hair2)' }}>
+            <div className="flex items-center justify-between gap-2">
+              <p className="text-[11px]" style={{ color: 'var(--muted2)' }}>
+                Bonus runs: {manual ? 'set manually' : autoAdvantage.teamId ? `automatic — ${(autoAdvantage.teamId === teamA.id ? teamA : teamB).name} +${autoAdvantage.amount}` : 'automatic — none for this match'}
+              </p>
+              {manual ? (
+                <button onClick={() => setManual(null)} className="plain-btn text-[11px] px-2 py-1 rounded-md shrink-0">Use automatic</button>
+              ) : (
+                <button onClick={() => setManual({ teamId: autoAdvantage.teamId || '', amount: String(autoAdvantage.amount || 10) })} className="plain-btn text-[11px] px-2 py-1 rounded-md shrink-0">Set manually</button>
+              )}
+            </div>
+            {manual && (
+              <div className="grid grid-cols-2 gap-2 mt-2">
+                <div>
+                  <label className="text-[10px]" style={{ color: 'var(--muted2)' }}>Bonus goes to</label>
+                  <select value={manual.teamId} onChange={(e) => setManual({ ...manual, teamId: e.target.value })} className="field w-full mt-1 px-2 py-2 text-sm">
+                    <option value="">No one</option>
+                    <option value={teamA.id}>{teamA.name}</option>
+                    <option value={teamB.id}>{teamB.name}</option>
+                  </select>
+                </div>
+                <div>
+                  <label className="text-[10px]" style={{ color: 'var(--muted2)' }}>Runs</label>
+                  <input inputMode="numeric" value={manual.amount} onChange={(e) => setManual({ ...manual, amount: e.target.value.replace(/\D/g, '') })} disabled={!manual.teamId} className="field w-full mt-1 px-2 py-2 text-sm" />
+                </div>
+              </div>
+            )}
           </div>
         )}
 

@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest'
 import {
   computeAbandonedSlotPoints,
   computeHeadToHead,
+  computeMatchAdvantage,
   computeLeagueStandings,
   computePointsTable,
   computePunctualityBonus,
@@ -230,5 +231,28 @@ describe('An abandoned slot counts as a resolved outcome elsewhere in the app', 
     }
     const grid = computeHeadToHead({ teams, slots: [withStaleMatch] })
     expect(grid.A.B.wins).toBe(0)
+  })
+})
+
+describe('Eliminator bonus when the round robin is level on wins', () => {
+  const rr = (a, b, winner, sa, sb) => ({ result: { teamA: a, teamB: b, teamAScore: sa, teamBScore: sb, teamAOvers: 7, teamBOvers: 7, battingFirst: a, winner, matchOvers: 7 } })
+  const build = (m1, m2, m3) => ({
+    id: 's', teamIds: ['A', 'B', 'C'], slotType: 'League',
+    matches: [
+      { type: 'league1', ...m1 }, { type: 'league2', ...m2 }, { type: 'league3', ...m3 },
+      { type: 'qualifier1', result: { teamA: 'A', teamB: 'B', winner: 'A', teamAScore: 90, teamBScore: 60 } },
+      { id: 'el', type: 'eliminator' }, { type: 'final' },
+    ],
+  })
+
+  it('1-1-1: qualifier keeps the 1st-seed bonus, eliminator gets none', () => {
+    const slot = build(rr('A', 'B', 'A', 150, 100), rr('B', 'C', 'B', 150, 100), rr('C', 'A', 'C', 150, 149))
+    expect(computeMatchAdvantage({ teams: [], slots: [slot] }, slot, 'qualifier1', 'q')).toEqual({ teamId: 'A', amount: 10 })
+    expect(computeMatchAdvantage({ teams: [], slots: [slot] }, slot, 'eliminator', 'el')).toEqual({ teamId: null, amount: 0 })
+  })
+
+  it('not level (2-1-0): eliminator still goes to the losing qualifier', () => {
+    const slot = build(rr('A', 'B', 'A', 150, 100), rr('B', 'C', 'B', 150, 100), rr('A', 'C', 'A', 150, 100))
+    expect(computeMatchAdvantage({ teams: [], slots: [slot] }, slot, 'eliminator', 'el')).toEqual({ teamId: 'B', amount: 10 })
   })
 })

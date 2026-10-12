@@ -321,11 +321,15 @@ export function computeMatchAdvantage(data, slot, matchType, matchId) {
   if (matchType === 'league1' || matchType === 'league2' || matchType === 'league3') {
     return { teamId: null, amount: 0 }
   }
-  const { standings } = resolveSlot(slot)
+  const { standings, wins } = resolveSlot(slot)
   const q1 = slot.matches.find((m) => m.type === 'qualifier1')
   let autoTeamId = null
   if (matchType === 'qualifier1') autoTeamId = standings ? standings[0] : null
-  if (matchType === 'eliminator' && q1 && q1.result) {
+  // League ruling: when all three teams finish the round robin level on wins (1-1-1) and
+  // are only separated by NRR, the 1st seed still gets the qualifier bonus but the
+  // eliminator carries none. (Anything else can be set by hand in the result entry.)
+  const levelOnWins = slot.teamIds.length > 0 && slot.teamIds.every((id) => wins[id] === wins[slot.teamIds[0]])
+  if (matchType === 'eliminator' && q1 && q1.result && !levelOnWins) {
     autoTeamId = q1.result.winner === q1.result.teamA ? q1.result.teamB : q1.result.teamA
   }
   if ((slot.slotType || 'League') !== 'Final') {
