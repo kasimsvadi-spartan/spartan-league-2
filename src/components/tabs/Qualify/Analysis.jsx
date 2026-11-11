@@ -42,7 +42,7 @@ export function Analysis({ data }) {
           </div>
         </div>
         <p className="text-[11px] mt-2" style={{ color: 'var(--muted2)' }}>
-          From {sim.runs.toLocaleString()} simulated finishes of the {sim.remainingSlots} league slot{sim.remainingSlots === 1 ? '' : 's'} still to play. Finishing 1st also earns the 10-run Final Slot bonus.
+          From {sim.runs.toLocaleString()} simulated finishes of the {sim.remainingSlots} league slot{sim.remainingSlots === 1 ? '' : 's'} still to play. Finishing 1st matters too: that team gets a 10-run bonus to use in the Final Slot (any match except the Final).
         </p>
       </Card>
 
@@ -50,7 +50,7 @@ export function Analysis({ data }) {
         <p className="text-xs uppercase tracking-wide mb-2" style={{ color: 'var(--muted)' }}>Chance of finishing in each position</p>
         <div className="flex items-center gap-1 mb-1" style={{ paddingLeft: 32 }}>
           {sim.teams.map((_, i) => (
-            <span key={i} className="text-[9px] text-center" style={{ flex: 1, color: `rgb(${zoneRgb(i)})`, fontWeight: 600 }}>{i + 1}</span>
+            <span key={i} className="text-[9px] text-center" style={{ flex: 1, color: `rgb(${zoneRgb(i)})`, fontWeight: 600 }}>{i === 0 ? '1★' : i + 1}</span>
           ))}
         </div>
         <div className="space-y-1">
@@ -69,7 +69,7 @@ export function Analysis({ data }) {
             </div>
           ))}
         </div>
-        <p className="text-[10px] mt-2" style={{ color: 'var(--faint)' }}>Percent of simulations. Gold columns reach the Grand Final, green the Semi-Final, red are out.</p>
+        <p className="text-[10px] mt-2" style={{ color: 'var(--faint)' }}>Percent of simulations. Gold columns reach the Grand Final, green the Semi-Final, red are out. ★ 1st place also earns the 10-run Final Slot bonus.</p>
       </Card>
 
       <div className="space-y-2">
@@ -100,11 +100,12 @@ export function Analysis({ data }) {
                   </div>
                 ))}
               </div>
-              <div className="flex justify-between text-[10px] mb-2" style={{ color: 'var(--muted2)' }}>
+              <div className="flex justify-between text-[10px] mb-1" style={{ color: 'var(--muted2)' }}>
                 <span style={{ color: `rgb(${GOLD})` }}>Final {pct(t.pFinal)}</span>
                 <span style={{ color: `rgb(${GREEN})` }}>Semi {pct(t.pSemi)}</span>
                 <span style={{ color: `rgb(${RED})` }}>Out {pct(t.pOut)}</span>
               </div>
+              <p className="text-[10px] mb-2" style={{ color: `rgb(${GOLD})` }}>★ Finish 1st (10-run Final Slot bonus): {pct(t.pFirst)}</p>
 
               <p className="text-xs mb-1" style={{ color: verdict.color }}>{verdict.text}</p>
               <p className="text-[11px]" style={{ color: 'var(--muted)' }}>

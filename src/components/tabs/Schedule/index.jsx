@@ -227,6 +227,22 @@ export function Schedule({ data, persist, isAdmin, draft, clearDraft }) {
                   <span key={id} style={slot.series && id === slot.series.optedOutTeamId ? { opacity: 0.4 } : undefined}><TeamPill team={teamById(id)} /></span>
                 ))}
               </div>
+              {isFinalSlot && !abandonment && (() => {
+                const holder = teamById(finalSlotHolderId)
+                const usedIn = finalSlotAdvantage?.usedInMatchId && slot.matches.find((m) => m.id === finalSlotAdvantage.usedInMatchId)
+                const armedFor = finalSlotAdvantage?.activatedForMatchId && slot.matches.find((m) => m.id === finalSlotAdvantage.activatedForMatchId)
+                let text
+                if (!holder) text = 'Whoever finishes 1st on the points table gets a 10-run bonus to use in this slot — any match except the Final.'
+                else if (usedIn) text = `${holder.name} (1st on the table) used their 10-run bonus in ${MATCH_LABELS[usedIn.type]}. None remaining.`
+                else if (armedFor) text = `${holder.name} (1st on the table) has their 10-run bonus armed for ${MATCH_LABELS[armedFor.type]}.`
+                else text = `${holder.name} finished 1st on the table and holds a 10-run bonus — available in any match of this slot except the Final. Must be declared before the match starts.`
+                return (
+                  <div className="mb-3 px-2.5 py-2 rounded-md flex items-start gap-2" style={{ background: 'rgba(239, 193, 58, 0.1)', border: '1px solid var(--hair2)' }}>
+                    <Zap size={13} color="var(--gold)" style={{ marginTop: 2, flexShrink: 0 }} />
+                    <p className="text-xs" style={{ color: 'var(--cream)' }}>{text}</p>
+                  </div>
+                )
+              })()}
               {series && (
                 <div className="mb-3 px-2.5 py-2 rounded-md" style={{ background: 'rgba(239, 193, 58, 0.1)', border: '1px solid var(--hair2)' }}>
                   <p className="text-xs" style={{ color: 'var(--cream)' }}>
@@ -291,7 +307,7 @@ export function Schedule({ data, persist, isAdmin, draft, clearDraft }) {
                   if (m.type === 'eliminator' && resolvedTeams.eliminator) { a = teamById(resolvedTeams.eliminator[0]); b = teamById(resolvedTeams.eliminator[1]) }
                   if (m.type === 'final' && resolvedTeams.final) { a = teamById(resolvedTeams.final[0]); b = teamById(resolvedTeams.final[1]) }
                   const playable = a && b
-                  const bonusEligible = isFinalSlot && (m.type === 'qualifier1' || m.type === 'eliminator') && finalSlotHolderId && !finalSlotAdvantage?.usedInMatchId
+                  const bonusEligible = isFinalSlot && m.type !== 'final' && !!finalSlotHolderId && !finalSlotAdvantage?.usedInMatchId && ((a && a.id === finalSlotHolderId) || (b && b.id === finalSlotHolderId))
                   const bonusActiveHere = finalSlotAdvantage?.activatedForMatchId === m.id
                   return (
                     <div key={m.id} className="pt-1.5" style={{ borderTop: '1px solid var(--hair3)' }}>

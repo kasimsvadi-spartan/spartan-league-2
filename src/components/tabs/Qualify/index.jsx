@@ -62,6 +62,7 @@ export function Qualify({ data, persist, isAdmin, onCreateSlot }) {
                   <div>
                     <p className="text-sm font-semibold" style={{ color: r.team.color }}>{r.team.name}</p>
                     <p className="text-[11px]" style={{ color: 'var(--muted2)' }}>{r.total} pts · NRR {r.nrr >= 0 ? '+' : ''}{r.nrr.toFixed(2)}</p>
+                    {i === 0 && <p className="text-[10px] mt-0.5" style={{ color: 'var(--gold)' }}>★ Holds the 10-run Final Slot bonus</p>}
                   </div>
                 </div>
                 <span className="text-[10px] uppercase tracking-wide px-2 py-1 rounded font-semibold" style={{ background: z.bg, color: z.text }}>{z.label}</span>

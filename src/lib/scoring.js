@@ -81,6 +81,24 @@ export function chaseBonusPts(o) {
 
 export function inningsForMatch(result) {
   const matchOvers = result.matchOvers || 7
+  // Bonus/penalty runs count toward NRR (rulebook section 9), so use the net figures when a
+  // result carries any. In a no-chase walkover the winner is credited with the opposition's
+  // gross score over 1 over, and the batting-first side keeps its (negative) net total.
+  if (result.walkover) {
+    const firstId = result.battingFirst
+    const secondId = firstId === result.teamA ? result.teamB : result.teamA
+    const firstIsA = firstId === result.teamA
+    return {
+      [firstId]: { runs: firstIsA ? result.netScoreA : result.netScoreB, overs: firstIsA ? result.teamAOvers : result.teamBOvers },
+      [secondId]: { runs: firstIsA ? result.teamAScore : result.teamBScore, overs: 1 },
+    }
+  }
+  if (result.bonusRunsApplied && result.netScoreA != null && result.netScoreB != null && result.teamAOvers != null && result.teamBOvers != null) {
+    return {
+      [result.teamA]: { runs: result.netScoreA, overs: result.teamAOvers },
+      [result.teamB]: { runs: result.netScoreB, overs: result.teamBOvers },
+    }
+  }
   // New schema: overs faced are entered directly for each team.
   if (result.teamAOvers != null && result.teamBOvers != null) {
     return {
@@ -370,10 +388,14 @@ export function computeFinalSlotAdvantageHolder(data) {
 // the slot's own seeding; the Final Slot's saved bonus (if currently activated for this
 // match) can stack on top of the qualifier advantage.
 export function computeMatchAdvantage(data, slot, matchType, matchId) {
-  if (matchType === 'league1' || matchType === 'league2' || matchType === 'league3') {
-    return { teamId: null, amount: 0 }
-  }
-  const { standings, wins } = resolveSlot(slot)
+  const isFinalSlot = (slot.slotType || 'League') === 'Final'
+  const isRoundRobin = matchType === 'league1' || matchType === 'league2' || matchType === 'league3'
+  const none = { teamId: null, amount: 0 }
+  // Round-robin matches carry no standard advantage — only the Final Slot's saved bonus
+  // can apply to them (below).
+  if (isRoundRobin && !isFinalSlot) return none
+
+  const { standings, wins, resolvedTeams } = resolveSlot(slot)
   const q1 = slot.matches.find((m) => m.type === 'qualifier1')
   let autoTeamId = null
   if (matchType === 'qualifier1') autoTeamId = standings ? standings[0] : null
@@ -384,16 +406,24 @@ export function computeMatchAdvantage(data, slot, matchType, matchId) {
   if (matchType === 'eliminator' && q1 && q1.result && !levelOnWins) {
     autoTeamId = q1.result.winner === q1.result.teamA ? q1.result.teamB : q1.result.teamA
   }
-  if ((slot.slotType || 'League') !== 'Final') {
-    return autoTeamId ? { teamId: autoTeamId, amount: 10 } : { teamId: null, amount: 0 }
+  if (!isFinalSlot) {
+    return autoTeamId ? { teamId: autoTeamId, amount: 10 } : none
   }
-  if (matchType === 'final') return autoTeamId ? { teamId: autoTeamId, amount: 10 } : { teamId: null, amount: 0 }
+  // The Final of the Final Slot is the one match the saved bonus can't be used in.
+  if (matchType === 'final') return autoTeamId ? { teamId: autoTeamId, amount: 10 } : none
+
   // `data.finalSlotAdvantage` only ever persists the admin's activation choice — who holds
   // the bonus is always re-derived live from standings (computeFinalSlotAdvantageHolder),
-  // so it can never go stale if a result gets corrected after the fact.
+  // so it can never go stale if a result gets corrected after the fact. It only counts in a
+  // match the holder is actually playing.
   const holderId = computeFinalSlotAdvantageHolder(data)
   const activation = data.finalSlotAdvantage || null
-  const finalSlotBonus = holderId ? { teamId: holderId, usedInMatchId: activation?.usedInMatchId || null } : null
+  const thisMatch = slot.matches.find((m) => m.id === matchId)
+  const participants = isRoundRobin
+    ? [thisMatch && thisMatch.fixedA, thisMatch && thisMatch.fixedB]
+    : resolvedTeams[matchType] || []
+  const holderPlays = !!holderId && participants.includes(holderId)
+  const finalSlotBonus = holderPlays ? { teamId: holderId, usedInMatchId: activation?.usedInMatchId || null } : null
   return resolveAdvantageAmount(finalSlotBonus, activation?.activatedForMatchId ?? null, matchId, autoTeamId)
 }
 

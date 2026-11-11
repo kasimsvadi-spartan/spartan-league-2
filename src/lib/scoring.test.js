@@ -2,6 +2,8 @@ import { describe, expect, it } from 'vitest'
 import {
   computeAbandonedSlotPoints,
   computeHeadToHead,
+  computeFinalSlotAdvantageHolder,
+  inningsForMatch,
   computeMatchAdvantage,
   computeLeagueStandings,
   computePointsTable,
@@ -344,5 +346,59 @@ describe('Best-of-5 series slot (one team opted out)', () => {
     const back = revertSeries({ teams, slots: [converted] }, 's').slots[0]
     expect(back.series).toBeUndefined()
     expect(back.matches.map((m) => m.type)).toEqual(['league1', 'league2', 'league3', 'qualifier1', 'eliminator', 'final'])
+  })
+})
+
+describe('Final Slot 1st-place bonus: any match except the Final', () => {
+  const teams = ['T1', 'T2', 'T3', 'T4'].map((id) => ({ id, name: id }))
+  const empty = () => ['league1', 'league2', 'league3', 'qualifier1', 'eliminator', 'final'].map((type) => ({ type, result: null }))
+  // 21 finished league slots (abandoned, T1 the only willing team each time) put T1 firmly 1st.
+  const league = Array.from({ length: 21 }, (_, i) => ({ id: `L${i}`, slotType: 'League', teamIds: ['T1', 'T2', 'T3'], abandonment: { willingTeamIds: ['T1'], winnerId: null }, matches: empty() }))
+  const finalSlot = (activation) => {
+    const slot = {
+      id: 'F', slotType: 'Final', teamIds: ['T1', 'T2', 'T3'],
+      matches: [
+        { id: 'm1', type: 'league1', fixedA: 'T1', fixedB: 'T2', result: null },
+        { id: 'm2', type: 'league2', fixedA: 'T2', fixedB: 'T3', result: null },
+        { id: 'm3', type: 'league3', fixedA: 'T1', fixedB: 'T3', result: null },
+        { id: 'q', type: 'qualifier1', result: null }, { id: 'e', type: 'eliminator', result: null }, { id: 'f', type: 'final', result: null },
+      ],
+    }
+    return { data: { teams, slots: [...league, slot], finalSlotAdvantage: activation }, slot }
+  }
+
+  it('goes to whoever finishes 1st on the points table', () => {
+    expect(computeFinalSlotAdvantageHolder(finalSlot(null).data)).toBe('T1')
+  })
+
+  it('can be used in a round-robin match of the Final Slot, if the holder is playing', () => {
+    const { data, slot } = finalSlot({ activatedForMatchId: 'm1', usedInMatchId: null })
+    expect(computeMatchAdvantage(data, slot, 'league1', 'm1')).toEqual({ teamId: 'T1', amount: 10 })
+  })
+
+  it('is nothing in a match the holder is not playing', () => {
+    const { data, slot } = finalSlot({ activatedForMatchId: 'm2', usedInMatchId: null })
+    expect(computeMatchAdvantage(data, slot, 'league2', 'm2')).toEqual({ teamId: null, amount: 0 })
+  })
+
+  it('is nothing unless armed, and nothing once used', () => {
+    expect(computeMatchAdvantage(finalSlot(null).data, finalSlot(null).slot, 'league1', 'm1')).toEqual({ teamId: null, amount: 0 })
+    const { data, slot } = finalSlot({ activatedForMatchId: 'm3', usedInMatchId: 'm1' })
+    expect(computeMatchAdvantage(data, slot, 'league3', 'm3')).toEqual({ teamId: null, amount: 0 })
+  })
+
+  it('never applies to the Final itself', () => {
+    const { data, slot } = finalSlot({ activatedForMatchId: 'f', usedInMatchId: null })
+    expect(computeMatchAdvantage(data, slot, 'final', 'f')).toEqual({ teamId: null, amount: 0 })
+  })
+
+  it('counts toward NRR: a bonus-run match uses its net scores', () => {
+    const r = { teamA: 'T1', teamB: 'T2', teamAScore: 60, teamBScore: 65, teamAOvers: 7, teamBOvers: 7, battingFirst: 'T1', bonusRunsApplied: 10, netScoreA: 70, netScoreB: 65 }
+    expect(inningsForMatch(r)).toEqual({ T1: { runs: 70, overs: 7 }, T2: { runs: 65, overs: 7 } })
+  })
+
+  it('counts toward NRR: a no-chase walkover credits the winner with the opposition gross score over 1 over', () => {
+    const r = { teamA: 'T1', teamB: 'T2', teamAScore: 6, teamBScore: null, teamAOvers: 6.2, teamBOvers: null, battingFirst: 'T1', walkover: true, bonusRunsApplied: -10, netScoreA: -4, netScoreB: null }
+    expect(inningsForMatch(r)).toEqual({ T1: { runs: -4, overs: 6.2 }, T2: { runs: 6, overs: 1 } })
   })
 })
