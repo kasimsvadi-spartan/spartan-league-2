@@ -230,10 +230,10 @@ export function Schedule({ data, persist, isAdmin, draft, clearDraft }) {
               {series && (
                 <div className="mb-3 px-2.5 py-2 rounded-md" style={{ background: 'rgba(239, 193, 58, 0.1)', border: '1px solid var(--hair2)' }}>
                   <p className="text-xs" style={{ color: 'var(--cream)' }}>
-                    Best-of-{slot.series.bestOf} series · first to {series.needed} wins · {teamById(series.teamIds[0])?.name} {series.wins[series.teamIds[0]]} – {series.wins[series.teamIds[1]]} {teamById(series.teamIds[1])?.name}
+                    Best-of-{slot.series.bestOf} series · first to {series.needed} wins · all {slot.series.bestOf} games are played · {teamById(series.teamIds[0])?.name} {series.wins[series.teamIds[0]]} – {series.wins[series.teamIds[1]]} {teamById(series.teamIds[1])?.name}
                   </p>
                   <p className="text-[10px] mt-1" style={{ color: 'var(--muted)' }}>
-                    {teamById(slot.series.optedOutTeamId)?.name} opted out and gets no points. Winner 4 pts, runner-up 2 pts; margin bonus and time bonus apply as in a normal slot.
+                    {teamById(slot.series.optedOutTeamId)?.name} opted out and gets no points. Winner 4 pts, runner-up 2 pts; every game earns margin points, and the time bonus needs all games played in full.
                   </p>
                 </div>
               )}
@@ -285,7 +285,7 @@ export function Schedule({ data, persist, isAdmin, draft, clearDraft }) {
                 )
               )}
               <div className="space-y-1.5">
-                {slot.matches.filter((m) => !series || !series.decided || m.result).map((m) => {
+                {slot.matches.map((m) => {
                   let a = m.fixedA ? teamById(m.fixedA) : null, b = m.fixedB ? teamById(m.fixedB) : null
                   if (m.type === 'qualifier1' && resolvedTeams.qualifier1) { a = teamById(resolvedTeams.qualifier1[0]); b = teamById(resolvedTeams.qualifier1[1]) }
                   if (m.type === 'eliminator' && resolvedTeams.eliminator) { a = teamById(resolvedTeams.eliminator[0]); b = teamById(resolvedTeams.eliminator[1]) }

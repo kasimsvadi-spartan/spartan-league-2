@@ -309,18 +309,30 @@ describe('Best-of-5 series slot (one team opted out)', () => {
     expect(byId.WC.marginBonusFor + byId.WC.marginBonusAgainst).toBe(0)
   })
 
-  it('time bonus goes only to the two playing teams, and only if every played game was full length', () => {
-    const full = slotWith([game('series1', 'RG'), game('series2', 'RG'), game('series3', 'RG')], { finishedOnTime: true })
-    expect(computePunctualityBonus(full)).toEqual({ RG: 1, BF: 1 })
-    const shortened = slotWith([game('series1', 'RG'), game('series2', 'RG', false, 5), game('series3', 'RG')], { finishedOnTime: true })
-    expect(computePunctualityBonus(shortened)).toEqual({ RG: 0, BF: 0 })
-    const late = slotWith([game('series1', 'RG'), game('series2', 'RG'), game('series3', 'RG')])
-    expect(computePunctualityBonus(late)).toEqual({ RG: 0, BF: 0 })
+  const all5 = (overrides = {}) => slotWith([
+    game('series1', 'RG'), game('series2', 'RG'), game('series3', 'RG'), game('series4', 'BF'), game('series5', 'BF', false, overrides.fifthOvers || 7),
+  ], overrides.slot || {})
+
+  it('time bonus goes only to the two playing teams, and only when all 5 games were played in full and on time', () => {
+    expect(computePunctualityBonus(all5({ slot: { finishedOnTime: true } }))).toEqual({ RG: 1, BF: 1 })
+    expect(computePunctualityBonus(all5({ slot: { finishedOnTime: true }, fifthOvers: 5 }))).toEqual({ RG: 0, BF: 0 })
+    expect(computePunctualityBonus(all5())).toEqual({ RG: 0, BF: 0 })
+    const onlyThree = slotWith([game('series1', 'RG'), game('series2', 'RG'), game('series3', 'RG')], { finishedOnTime: true })
+    expect(computePunctualityBonus(onlyThree)).toEqual({ RG: 0, BF: 0 })
   })
 
-  it('counts as a completed slot only once decided', () => {
-    expect(isSlotComplete(slotWith([game('series1', 'RG'), game('series2', 'RG')]))).toBe(false)
-    expect(isSlotComplete(slotWith([game('series1', 'RG'), game('series2', 'RG'), game('series3', 'RG')]))).toBe(true)
+  it('is only complete once all 5 games are played, even after a team has won 3', () => {
+    const threeNil = slotWith([game('series1', 'RG'), game('series2', 'RG'), game('series3', 'RG')])
+    expect(seriesStatus(threeNil).decided).toBe(true)
+    expect(isSlotComplete(threeNil)).toBe(false)
+    expect(isSlotComplete(all5())).toBe(true)
+  })
+
+  it('keeps earning margin points in the games after the series is decided', () => {
+    const bonusFor = (games) => Object.fromEntries(computePointsTable({ teams, slots: [slotWith(games)] }).map((r) => [r.team.id, r.marginBonusFor])).RG
+    const afterThree = bonusFor([game('series1', 'RG', true), game('series2', 'RG', true), game('series3', 'RG', true)])
+    const afterFour = bonusFor([game('series1', 'RG', true), game('series2', 'RG', true), game('series3', 'RG', true), game('series4', 'RG', true)])
+    expect(afterFour).toBeGreaterThan(afterThree) // game 4 was played after RG had already won the series
   })
 
   it('converts a 3-team slot to a series and back', () => {
