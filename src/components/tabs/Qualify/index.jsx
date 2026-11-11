@@ -1,11 +1,12 @@
 import { Award, Trophy } from 'lucide-react'
-import { computeLeagueStandings, TEAM_LEAGUE_SLOTS } from '../../../lib/scoring'
+import { computeLeagueStandings } from '../../../lib/scoring'
 import { assignTeamsToSlot } from '../../../lib/slotAssign'
 import { Card } from '../../layout/Card'
 import { SectionTitle } from '../../layout/SectionTitle'
 import { Empty } from '../../layout/Empty'
 import { TeamLogo } from '../../shared/TeamLogo'
 import { TeamPill } from '../../shared/TeamPill'
+import { Analysis } from './Analysis'
 
 const ZONE_STYLE = {
   final: { label: '→ Grand Final', bg: 'rgba(232,185,35,0.15)', border: 'var(--gold)', text: 'var(--gold)' },
@@ -70,50 +71,7 @@ export function Qualify({ data, persist, isAdmin, onCreateSlot }) {
         </div>
       )}
 
-      {!leagueDone && table.length >= 5 && (
-        <div className="mb-4">
-          <SectionTitle icon={Award}>Qualification Targets</SectionTitle>
-          <div className="space-y-2">
-            {table.map((r, i) => {
-              const remaining = Math.max(0, TEAM_LEAGUE_SLOTS - r.slotsPlayed)
-              const finalCutoff = table[1].total
-              const semiCutoff = table[4].total
-              const z = ZONE_STYLE[zoneFor(i)]
-              let body
-              if (i < 2) {
-                body = <p className="text-xs" style={{ color: 'var(--green)' }}>Currently on course for the Grand Final.</p>
-              } else if (i < 5) {
-                const gap = Math.max(0, finalCutoff - r.total)
-                const perSlot = remaining > 0 ? Math.ceil(gap / remaining) : null
-                body = gap === 0 ? (
-                  <p className="text-xs" style={{ color: 'var(--green)' }}>Level with or ahead of the current Final cutoff ({table[1].team.name}).</p>
-                ) : (
-                  <p className="text-xs" style={{ color: 'var(--muted)' }}>Needs <span style={{ color: 'var(--gold)', fontWeight: 600 }}>{gap} more pts</span> to draw level with {table[1].team.name} for a Final berth {remaining > 0 ? `(~${perSlot}/slot over ${remaining} remaining slots)` : '(no league slots remaining)'}.</p>
-                )
-              } else {
-                const gap = Math.max(0, semiCutoff - r.total)
-                const perSlot = remaining > 0 ? Math.ceil(gap / remaining) : null
-                body = gap === 0 ? (
-                  <p className="text-xs" style={{ color: 'var(--green)' }}>Level with or ahead of the current Semi-Final cutoff ({table[4].team.name}).</p>
-                ) : (
-                  <p className="text-xs" style={{ color: 'var(--red)' }}>Needs <span style={{ color: 'var(--gold)', fontWeight: 600 }}>{gap} more pts</span> to draw level with {table[4].team.name} for a Semi-Final spot {remaining > 0 ? `(~${perSlot}/slot over ${remaining} remaining slots)` : '(no league slots remaining — elimination risk)'}.</p>
-                )
-              }
-              return (
-                <Card key={r.team.id} style={{ borderColor: z.border }}>
-                  <div className="flex items-center justify-between mb-1">
-                    <div className="flex items-center gap-2"><span className="display text-lg" style={{ color: 'var(--muted)' }}>{i + 1}</span><TeamPill team={r.team} /></div>
-                    <span className="text-[9px] uppercase tracking-wide px-1.5 py-0.5 rounded font-semibold" style={{ background: z.bg, color: z.text }}>{z.label}</span>
-                  </div>
-                  <p className="text-[11px] mb-1" style={{ color: 'var(--muted2)' }}>{r.total} pts · {remaining} slots left</p>
-                  {body}
-                </Card>
-              )
-            })}
-          </div>
-          <p className="text-[11px] mt-3" style={{ color: 'var(--muted2)' }}>These are simplified targets against today's cutoff position — they ignore bonus points and assume rivals stop gaining, so treat them as a rough guide rather than a guarantee.</p>
-        </div>
-      )}
+      {!leagueDone && table.length >= 5 && <Analysis data={data} />}
 
       {leagueDone && !semiReady && (
         <Card className="mb-4 text-center">
