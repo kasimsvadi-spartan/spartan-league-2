@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react'
 import { Ban, CalendarDays, Check, Clock, Pencil, Plus, Trash2, Users, Zap } from 'lucide-react'
-import { MATCH_LABELS, computeFinalSlotAdvantageHolder, resolveSlot } from '../../../lib/scoring'
-import { assignTeamsToSlot } from '../../../lib/slotAssign'
+import { MATCH_LABELS, activeTeamIds, computeFinalSlotAdvantageHolder, isSlotComplete, resolveSlot, seriesStatus } from '../../../lib/scoring'
+import { assignTeamsToSlot, convertToSeries, revertSeries } from '../../../lib/slotAssign'
 import { uid } from '../../../lib/uid'
 import { Card } from '../../layout/Card'
 import { SectionTitle } from '../../layout/SectionTitle'
@@ -31,6 +31,7 @@ export function Schedule({ data, persist, isAdmin, draft, clearDraft }) {
   const [abandoningSlotId, setAbandoningSlotId] = useState(null)
   const [willingPicked, setWillingPicked] = useState([])
   const [twoWillingWinner, setTwoWillingWinner] = useState('')
+  const [seriesSlotId, setSeriesSlotId] = useState(null)
   const teamById = (id) => data.teams.find((t) => t.id === id)
   const blockedDates = data.blockedDates || []
   const finalSlotAdvantage = data.finalSlotAdvantage || null
@@ -54,6 +55,13 @@ export function Schedule({ data, persist, isAdmin, draft, clearDraft }) {
   function updateSlotFlag(slotId, patch) {
     const slots = data.slots.map((s) => (s.id !== slotId ? s : { ...s, ...patch }))
     persist({ ...data, slots })
+  }
+  function makeSeries(slotId, optedOutTeamId) {
+    persist(convertToSeries(data, slotId, optedOutTeamId))
+    setSeriesSlotId(null)
+  }
+  function undoSeries(slotId) {
+    persist(revertSeries(data, slotId))
   }
   function toggleFinalSlotBonus(matchId) {
     const active = finalSlotAdvantage && finalSlotAdvantage.activatedForMatchId === matchId
@@ -197,7 +205,9 @@ export function Schedule({ data, persist, isAdmin, draft, clearDraft }) {
           }
           const slot = item.slot
           const { resolvedTeams } = resolveSlot(slot)
-          const done = slot.matches.every((m) => m.result)
+          const done = isSlotComplete(slot)
+          const series = seriesStatus(slot)
+          const hasResults = slot.matches.some((m) => m.result)
           const isFinalSlot = (slot.slotType || 'League') === 'Final'
           const abandonment = slot.abandonment
           return (
@@ -212,7 +222,21 @@ export function Schedule({ data, persist, isAdmin, draft, clearDraft }) {
                   {isAdmin && <button onClick={() => setConfirmDeleteSlot(slot.id)} title="Delete slot"><Trash2 size={14} color="var(--red)" /></button>}
                 </div>
               </div>
-              <div className="flex gap-3 mb-3 flex-wrap">{slot.teamIds.map((id) => <TeamPill key={id} team={teamById(id)} />)}</div>
+              <div className="flex gap-3 mb-3 flex-wrap">
+                {slot.teamIds.map((id) => (
+                  <span key={id} style={slot.series && id === slot.series.optedOutTeamId ? { opacity: 0.4 } : undefined}><TeamPill team={teamById(id)} /></span>
+                ))}
+              </div>
+              {series && (
+                <div className="mb-3 px-2.5 py-2 rounded-md" style={{ background: 'rgba(239, 193, 58, 0.1)', border: '1px solid var(--hair2)' }}>
+                  <p className="text-xs" style={{ color: 'var(--cream)' }}>
+                    Best-of-{slot.series.bestOf} series · first to {series.needed} wins · {teamById(series.teamIds[0])?.name} {series.wins[series.teamIds[0]]} – {series.wins[series.teamIds[1]]} {teamById(series.teamIds[1])?.name}
+                  </p>
+                  <p className="text-[10px] mt-1" style={{ color: 'var(--muted)' }}>
+                    {teamById(slot.series.optedOutTeamId)?.name} opted out and gets no points. Winner 4 pts, runner-up 2 pts; margin bonus and time bonus apply as in a normal slot.
+                  </p>
+                </div>
+              )}
 
               {abandonment ? (
                 <div>
@@ -261,7 +285,7 @@ export function Schedule({ data, persist, isAdmin, draft, clearDraft }) {
                 )
               )}
               <div className="space-y-1.5">
-                {slot.matches.map((m) => {
+                {slot.matches.filter((m) => !series || !series.decided || m.result).map((m) => {
                   let a = m.fixedA ? teamById(m.fixedA) : null, b = m.fixedB ? teamById(m.fixedB) : null
                   if (m.type === 'qualifier1' && resolvedTeams.qualifier1) { a = teamById(resolvedTeams.qualifier1[0]); b = teamById(resolvedTeams.qualifier1[1]) }
                   if (m.type === 'eliminator' && resolvedTeams.eliminator) { a = teamById(resolvedTeams.eliminator[0]); b = teamById(resolvedTeams.eliminator[1]) }
@@ -307,7 +331,7 @@ export function Schedule({ data, persist, isAdmin, draft, clearDraft }) {
                   )
                 })}
               </div>
-              <GuestTracker data={data} persist={persist} slot={slot} isAdmin={isAdmin} />
+              <GuestTracker data={data} persist={persist} slot={{ ...slot, teamIds: activeTeamIds(slot) }} isAdmin={isAdmin} />
               {isAdmin && (
                 <div className="mt-3 pt-3" style={{ borderTop: '1px solid var(--hair3)' }}>
                   <div className="flex items-center gap-3 flex-wrap mb-2">
@@ -320,7 +344,29 @@ export function Schedule({ data, persist, isAdmin, draft, clearDraft }) {
                       Referee override (award bonus regardless)
                     </label>
                   </div>
-                  {abandoningSlotId === slot.id ? (
+                  {!slot.series && slot.teamIds.length === 3 && !hasResults && (
+                    seriesSlotId === slot.id ? (
+                      <div className="mb-2">
+                        <p className="text-xs uppercase tracking-wide mb-2" style={{ color: 'var(--muted)' }}>Which team opted out? The other two play a best-of-5 series.</p>
+                        <div className="flex gap-2 flex-wrap mb-2">
+                          {slot.teamIds.map((id) => (
+                            <button key={id} onClick={() => makeSeries(slot.id, id)} className="chip-outline px-2.5 py-1.5 rounded-md text-xs">{teamById(id)?.name} opted out</button>
+                          ))}
+                        </div>
+                        <button onClick={() => setSeriesSlotId(null)} className="plain-btn px-3 py-1.5 rounded-md text-xs">Cancel</button>
+                      </div>
+                    ) : (
+                      <button onClick={() => setSeriesSlotId(slot.id)} className="plain-btn flex items-center gap-1.5 text-xs px-2.5 py-1.5 rounded-md mb-2">
+                        <Users size={12} /> A team opted out — play a best-of-5 series
+                      </button>
+                    )
+                  )}
+                  {slot.series && !hasResults && (
+                    <button onClick={() => undoSeries(slot.id)} className="plain-btn flex items-center gap-1.5 text-xs px-2.5 py-1.5 rounded-md mb-2">
+                      Undo — back to a normal 3-team slot
+                    </button>
+                  )}
+                  {slot.series ? null : abandoningSlotId === slot.id ? (
                     <div>
                       <p className="text-xs uppercase tracking-wide mb-2" style={{ color: 'var(--muted)' }}>Which teams are willing to play?</p>
                       <div className="flex gap-2 flex-wrap mb-2">

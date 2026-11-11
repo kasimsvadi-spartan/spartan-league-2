@@ -11,13 +11,59 @@ export const MATCH_LABELS = {
   qualifier1: 'Qualifier 1',
   eliminator: 'Eliminator',
   final: 'Final',
+  series1: 'Game 1',
+  series2: 'Game 2',
+  series3: 'Game 3',
+  series4: 'Game 4',
+  series5: 'Game 5',
 }
+export const SERIES_ORDER = ['series1', 'series2', 'series3', 'series4', 'series5']
 export const MATCH_ORDER = ['league1', 'league2', 'league3', 'qualifier1', 'eliminator', 'final']
 
 export const LEAGUE_SLOTS_TOTAL = 21
 export const TEAM_LEAGUE_SLOTS = 9 // each team plays 9 of the 21 league slots
 export const KNOCKOUT_SLOTS_TOTAL = 2 // Semi-Final + Grand Final
 export const TOTAL_SLOTS = LEAGUE_SLOTS_TOTAL + KNOCKOUT_SLOTS_TOTAL
+
+// ============================================================================
+// Best-of-N series slot — a league ruling for when a team can't field a side
+//
+// If one of a slot's three teams opts out, the other two play a best-of-5 series instead of
+// the usual 6-match tri-series: the series winner takes 4 slot points, the other team 2,
+// and the team that opted out 0. Every game is eligible for margin bonus/penalty points
+// (full 7-over games only) and the slot can earn the punctuality bonus, exactly as in a
+// regular slot — but only the two playing teams receive any of it. Bonus runs (a qualifier/
+// eliminator mechanic) don't apply. Stored as slot.series = { teamIds: [a, b],
+// optedOutTeamId, bestOf }, with the games as matches of type series1..series5.
+// ============================================================================
+
+export function seriesStatus(slot) {
+  if (!slot.series) return null
+  const { teamIds, bestOf = 5 } = slot.series
+  const needed = Math.floor(bestOf / 2) + 1
+  const wins = { [teamIds[0]]: 0, [teamIds[1]]: 0 }
+  let played = 0
+  slot.matches.forEach((m) => {
+    if (!m.result) return
+    played++
+    if (wins[m.result.winner] != null) wins[m.result.winner]++
+  })
+  const winner = teamIds.find((id) => wins[id] >= needed) || null
+  const loser = winner ? teamIds.find((id) => id !== winner) : null
+  return { teamIds, wins, needed, played, winner, loser, decided: !!winner }
+}
+
+// The teams actually playing a slot (the two in a series, otherwise all three).
+export function activeTeamIds(slot) {
+  return slot.series ? slot.series.teamIds : slot.teamIds
+}
+
+// A slot is resolved once it's abandoned, its series has a winner, or every match is played.
+export function isSlotComplete(slot) {
+  if (slot.abandonment) return true
+  if (slot.series) return seriesStatus(slot).decided
+  return slot.matches.every((m) => m.result)
+}
 
 export function marginBonusPts(m) {
   if (m >= 60) return 2
@@ -242,11 +288,17 @@ export function resolveMatch(raw, advantageTeamId = null, advantageAmount = 0) {
 // ============================================================================
 
 export function computePunctualityBonus(slot) {
-  const teamIds = slot.teamIds || []
+  const teamIds = activeTeamIds(slot) || []
   const award = () => Object.fromEntries(teamIds.map((id) => [id, 1]))
   const none = () => Object.fromEntries(teamIds.map((id) => [id, 0]))
   if (slot.punctualityOverride) return award()
   if (!slot.finishedOnTime) return none()
+  if (slot.series) {
+    // A series stops once decided, so the unplayed games don't count against it — but the
+    // series must actually be over, and every game that was played must have been full length.
+    const played = slot.matches.filter((m) => m.result)
+    return seriesStatus(slot).decided && played.every((m) => isFullOvers(m.result)) ? award() : none()
+  }
   const allPlayedFullLength = slot.matches.length > 0 && slot.matches.every((m) => m.result && isFullOvers(m.result))
   return allPlayedFullLength ? award() : none()
 }
@@ -381,7 +433,16 @@ export function computePointsTable(data) {
     }
     const fn = slot.matches.find((m) => m.type === 'final')
     const el = slot.matches.find((m) => m.type === 'eliminator')
-    if (fn && fn.result) {
+    if (slot.series) {
+      const st = seriesStatus(slot)
+      if (st.decided) {
+        if (table[st.winner]) { table[st.winner].placement += 4; table[st.winner].wins++; table[st.winner].slotsPlayed++ }
+        if (table[st.loser]) { table[st.loser].placement += 2; table[st.loser].runnerUp++; table[st.loser].slotsPlayed++ }
+        // The team that opted out gets nothing, but the slot still counts as one of its slots.
+        const out = slot.series.optedOutTeamId
+        if (table[out]) table[out].slotsPlayed++
+      }
+    } else if (fn && fn.result) {
       const w = fn.result.winner, l = w === fn.result.teamA ? fn.result.teamB : fn.result.teamA
       if (table[w]) { table[w].placement += 4; table[w].wins++; table[w].slotsPlayed++ }
       if (table[l]) { table[l].placement += 2; table[l].runnerUp++; table[l].slotsPlayed++ }
@@ -392,7 +453,7 @@ export function computePointsTable(data) {
     }
     slot.matches.forEach((m) => {
       if (!m.result) return
-      if (m.type === 'league1' || m.type === 'league2' || m.type === 'league3') allLeagueResults.push(m.result)
+      if (m.type === 'league1' || m.type === 'league2' || m.type === 'league3' || SERIES_ORDER.includes(m.type)) allLeagueResults.push(m.result)
       const mb = marginBonusForResult(m.result)
       if (mb) {
         if (table[mb.winner]) table[mb.winner].marginBonusFor += mb.bonus
@@ -415,7 +476,7 @@ export function computeLeagueStandings(data) {
   // An abandoned slot is a resolved outcome too (its points are locked in) — it must count
   // toward "the league stage is complete", or a single abandoned slot would permanently
   // block that from ever being true (see computeFinalSlotAdvantageHolder, which gates on it).
-  const completed = leagueSlots.filter((s) => s.abandonment || s.matches.every((m) => m.result)).length
+  const completed = leagueSlots.filter(isSlotComplete).length
   return { table, completed, total: LEAGUE_SLOTS_TOTAL, leagueSlots }
 }
 
@@ -429,7 +490,7 @@ export function computeChampion(data) {
 
 // Cumulative points/NRR for every team after each completed slot, in chronological order — for the progress chart.
 export function computeProgressionData(data) {
-  const completed = [...data.slots].filter((s) => s.abandonment || s.matches.every((m) => m.result)).sort((a, b) => (a.date || '').localeCompare(b.date || ''))
+  const completed = [...data.slots].filter(isSlotComplete).sort((a, b) => (a.date || '').localeCompare(b.date || ''))
   if (completed.length < 2) return []
   return completed.map((_, i) => {
     const upToHere = { ...data, slots: completed.slice(0, i + 1) }

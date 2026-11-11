@@ -35,8 +35,8 @@ export function computeRecords(data) {
 
   // Team totals & chase/defence records: full 7-over matches only, for a fair comparison.
   let highestTotal = null, lowestTotal = null, highestChased = null, lowestDefended = null
-  data.slots.forEach((slot) => slot.matches.forEach((m) => {
-    if (!m.result || !isFullOvers(m.result)) return
+  data.slots.forEach((slot) => slot.abandonment ? null : slot.matches.forEach((m) => {
+    if (!m.result || m.result.walkover || !isFullOvers(m.result)) return
     const { teamA, teamB, teamAScore, teamBScore, battingFirst, winner } = m.result
     ;[[teamA, teamAScore], [teamB, teamBScore]].forEach(([tid, score]) => {
       if (highestTotal == null || score > highestTotal.value) highestTotal = { value: score, team: teamById(tid), label: slot.date, slot }

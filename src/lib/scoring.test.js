@@ -6,12 +6,15 @@ import {
   computeLeagueStandings,
   computePointsTable,
   computePunctualityBonus,
+  isSlotComplete,
   marginBonusForResult,
   marginBonusPts,
   resolveAdvantageAmount,
   resolveMatch,
   resolveSlot,
+  seriesStatus,
 } from './scoring'
+import { convertToSeries, revertSeries } from './slotAssign'
 
 // The 8 rulebook test cases from the Part B spec, in order. Each test name quotes the case
 // verbatim so a failure is traceable straight back to the rulebook clause it covers.
@@ -254,5 +257,80 @@ describe('Eliminator bonus when the round robin is level on wins', () => {
   it('not level (2-1-0): eliminator still goes to the losing qualifier', () => {
     const slot = build(rr('A', 'B', 'A', 150, 100), rr('B', 'C', 'B', 150, 100), rr('A', 'C', 'A', 150, 100))
     expect(computeMatchAdvantage({ teams: [], slots: [slot] }, slot, 'eliminator', 'el')).toEqual({ teamId: 'B', amount: 10 })
+  })
+})
+
+describe('Best-of-5 series slot (one team opted out)', () => {
+  const teams = [{ id: 'RG', name: 'RG' }, { id: 'BF', name: 'BF' }, { id: 'WC', name: 'WC' }]
+  const game = (type, winner, big = false, overs = 7) => ({
+    type,
+    result: {
+      teamA: 'RG', teamB: 'BF', battingFirst: 'RG', winner, matchOvers: overs,
+      teamAOvers: 7, teamBOvers: 7,
+      teamAScore: winner === 'RG' ? (big ? 150 : 90) : 80, teamBScore: winner === 'BF' ? (big ? 150 : 90) : 80,
+      netScoreA: winner === 'RG' ? (big ? 150 : 90) : 80, netScoreB: winner === 'BF' ? (big ? 150 : 90) : 80,
+    },
+  })
+  const slotWith = (games, extra = {}) => ({
+    id: 's', teamIds: ['RG', 'BF', 'WC'], slotType: 'League',
+    series: { teamIds: ['RG', 'BF'], optedOutTeamId: 'WC', bestOf: 5 },
+    matches: [...games, ...['series1', 'series2', 'series3', 'series4', 'series5'].slice(games.length).map((type) => ({ type, result: null }))],
+    ...extra,
+  })
+
+  it('is decided at 3 wins; 2-2 is still open', () => {
+    expect(seriesStatus(slotWith([game('series1', 'RG'), game('series2', 'BF'), game('series3', 'RG'), game('series4', 'BF')])).decided).toBe(false)
+    const st = seriesStatus(slotWith([game('series1', 'RG'), game('series2', 'RG'), game('series3', 'BF'), game('series4', 'RG')]))
+    expect(st.decided).toBe(true)
+    expect(st.winner).toBe('RG')
+    expect(st.wins).toEqual({ RG: 3, BF: 1 })
+  })
+
+  it('winner 4, loser 2, the team that opted out 0 — and the slot counts as played for all three', () => {
+    const slot = slotWith([game('series1', 'RG'), game('series2', 'RG'), game('series3', 'RG')])
+    const byId = Object.fromEntries(computePointsTable({ teams, slots: [slot] }).map((r) => [r.team.id, r]))
+    expect(byId.RG.placement).toBe(4)
+    expect(byId.BF.placement).toBe(2)
+    expect(byId.WC.placement).toBe(0)
+    expect([byId.RG.slotsPlayed, byId.BF.slotsPlayed, byId.WC.slotsPlayed]).toEqual([1, 1, 1])
+  })
+
+  it('pays no slot points until the series is decided', () => {
+    const slot = slotWith([game('series1', 'RG'), game('series2', 'BF')])
+    const byId = Object.fromEntries(computePointsTable({ teams, slots: [slot] }).map((r) => [r.team.id, r]))
+    expect(byId.RG.placement + byId.BF.placement).toBe(0)
+  })
+
+  it('every full-length game earns margin bonus and a matching penalty for the other side', () => {
+    const slot = slotWith([game('series1', 'RG', true), game('series2', 'RG', true), game('series3', 'RG', true)])
+    const byId = Object.fromEntries(computePointsTable({ teams, slots: [slot] }).map((r) => [r.team.id, r]))
+    expect(byId.RG.marginBonusFor).toBeGreaterThan(0)
+    expect(byId.BF.marginBonusAgainst).toBe(byId.RG.marginBonusFor)
+    expect(byId.WC.marginBonusFor + byId.WC.marginBonusAgainst).toBe(0)
+  })
+
+  it('time bonus goes only to the two playing teams, and only if every played game was full length', () => {
+    const full = slotWith([game('series1', 'RG'), game('series2', 'RG'), game('series3', 'RG')], { finishedOnTime: true })
+    expect(computePunctualityBonus(full)).toEqual({ RG: 1, BF: 1 })
+    const shortened = slotWith([game('series1', 'RG'), game('series2', 'RG', false, 5), game('series3', 'RG')], { finishedOnTime: true })
+    expect(computePunctualityBonus(shortened)).toEqual({ RG: 0, BF: 0 })
+    const late = slotWith([game('series1', 'RG'), game('series2', 'RG'), game('series3', 'RG')])
+    expect(computePunctualityBonus(late)).toEqual({ RG: 0, BF: 0 })
+  })
+
+  it('counts as a completed slot only once decided', () => {
+    expect(isSlotComplete(slotWith([game('series1', 'RG'), game('series2', 'RG')]))).toBe(false)
+    expect(isSlotComplete(slotWith([game('series1', 'RG'), game('series2', 'RG'), game('series3', 'RG')]))).toBe(true)
+  })
+
+  it('converts a 3-team slot to a series and back', () => {
+    const data = { teams, slots: [{ id: 's', teamIds: ['RG', 'BF', 'WC'], matches: [] }] }
+    const converted = convertToSeries(data, 's', 'WC').slots[0]
+    expect(converted.series).toEqual({ teamIds: ['RG', 'BF'], optedOutTeamId: 'WC', bestOf: 5 })
+    expect(converted.matches.map((m) => m.type)).toEqual(['series1', 'series2', 'series3', 'series4', 'series5'])
+    expect(converted.matches.every((m) => m.fixedA === 'RG' && m.fixedB === 'BF')).toBe(true)
+    const back = revertSeries({ teams, slots: [converted] }, 's').slots[0]
+    expect(back.series).toBeUndefined()
+    expect(back.matches.map((m) => m.type)).toEqual(['league1', 'league2', 'league3', 'qualifier1', 'eliminator', 'final'])
   })
 })

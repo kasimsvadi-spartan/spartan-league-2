@@ -22,7 +22,7 @@ export function ResultModal({ data, persist, slotId, matchId, teamA, teamB, slot
   // The automatic advantage follows the rulebook, but the admin can override it by hand for
   // the knockout matches (e.g. when the league's own ruling differs from the automatic one).
   // A manual setting replaces the automatic one entirely: who gets it, and how many runs.
-  const canOverride = matchType && !['league1', 'league2', 'league3'].includes(matchType)
+  const canOverride = ['qualifier1', 'eliminator', 'final'].includes(matchType)
   const [manual, setManual] = useState(
     existing && existing.advantageManual
       ? { teamId: existing.advantageTeamId || '', amount: String(existing.advantageAmount ?? 10) }

@@ -19,7 +19,7 @@ function normalize(values) {
 // it, same spirit as the Qualify tab's "simplified estimate" targets.
 export function predictSlotFavorite(data, slot) {
   const teamIds = slot.teamIds
-  if (!teamIds || teamIds.length !== 3) return null
+  if (!teamIds || teamIds.length !== 3 || slot.series) return null
   const teams = teamIds.map((id) => data.teams.find((t) => t.id === id))
   if (teams.some((t) => !t)) return null
 

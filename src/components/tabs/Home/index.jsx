@@ -1,5 +1,5 @@
 import { CalendarDays, Flame, ListOrdered, Medal, Trophy } from 'lucide-react'
-import { computeChampion, computePointsTable, MATCH_LABELS } from '../../../lib/scoring'
+import { activeTeamIds, computeChampion, computePointsTable, MATCH_LABELS } from '../../../lib/scoring'
 import { buildPlayerIndex, sortBatting, sortBowling, sortMvp } from '../../../lib/stats'
 import { fmt } from '../../../lib/players'
 import { Card } from '../../layout/Card'
@@ -133,7 +133,7 @@ export function Home({ data, persist, isAdmin, setTab }) {
                 {upcoming.date && <Countdown dateStr={upcoming.date} />}
               </div>
               <div className="space-y-3">
-                {upcoming.teamIds.map((id) => {
+                {activeTeamIds(upcoming).map((id) => {
                   const team = teamById(id)
                   const teamPlayers = players.filter((p) => p.team && p.team.id === id)
                   const key = [...sortMvp(teamPlayers.filter((p) => p.mvp)), ...sortBatting(teamPlayers.filter((p) => !p.mvp && p.batting))].slice(0, 2)
