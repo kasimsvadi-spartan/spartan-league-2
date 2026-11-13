@@ -1,4 +1,4 @@
-import { CalendarDays, Flame, Hand, ListOrdered, Medal, Star, Trophy } from 'lucide-react'
+import { CalendarDays, Flame, Hand, ListOrdered, Medal, Star } from 'lucide-react'
 import { activeTeamIds, computeChampion, computePointsTable, MATCH_LABELS } from '../../../lib/scoring'
 import { buildPlayerIndex, sortBatting, sortBowling, sortFielding, sortMvp } from '../../../lib/stats'
 import { findPoolPhoto, fmt, normName } from '../../../lib/players'
@@ -13,6 +13,7 @@ import { Countdown } from './Countdown'
 import { SlotFavorite } from './SlotFavorite'
 import { LiveScorecard } from './LiveScorecard'
 import { SpartanOfSlot } from './SpartanOfSlot'
+import { ChampionsShowcase } from './ChampionsShowcase'
 import { LeaderBackground } from './LeaderBackground'
 
 export function Home({ data, persist, isAdmin, setTab }) {
@@ -46,7 +47,7 @@ export function Home({ data, persist, isAdmin, setTab }) {
 
   return (
     <div className="space-y-4">
-      {leader && leader.total > 0 && <LeaderBackground team={leader.team} />}
+      {champion ? <LeaderBackground team={champion} /> : leader && leader.total > 0 && <LeaderBackground team={leader.team} />}
 
       <Announcements data={data} persist={persist} isAdmin={isAdmin} />
 
@@ -54,31 +55,7 @@ export function Home({ data, persist, isAdmin, setTab }) {
 
       <SpartanOfSlot data={data} />
 
-      {champion && (
-        <Card className="text-center py-6" style={{ borderColor: 'var(--gold)' }}>
-          <p className="text-[10px] uppercase tracking-[0.25em] flex items-center justify-center gap-1" style={{ color: 'var(--muted)' }}><Trophy size={12} color="var(--gold)" /> Season Awards</p>
-          <div className="flex justify-center mt-3 mb-1"><TeamLogo team={champion} size={72} /></div>
-          <p className="display text-2xl gold-text mt-1">{champion.name}</p>
-          <p className="text-xs mb-4" style={{ color: 'var(--muted)' }}>Season Champions</p>
-          <div className="grid grid-cols-3 gap-2 text-left">
-            <div className="stat-box">
-              <p className="text-[9px] uppercase tracking-wide" style={{ color: 'var(--muted2)' }}>Orange Cap</p>
-              <p className="text-xs font-medium mt-1">{topRuns ? topRuns.name : '—'}</p>
-              <p className="display text-lg gold-text">{topRuns ? topRuns.batting.total_runs : '—'}</p>
-            </div>
-            <div className="stat-box">
-              <p className="text-[9px] uppercase tracking-wide" style={{ color: 'var(--muted2)' }}>Purple Cap</p>
-              <p className="text-xs font-medium mt-1">{topWickets ? topWickets.name : '—'}</p>
-              <p className="display text-lg gold-text">{topWickets ? topWickets.bowling.total_wickets : '—'}</p>
-            </div>
-            <div className="stat-box">
-              <p className="text-[9px] uppercase tracking-wide" style={{ color: 'var(--muted2)' }}>MVP</p>
-              <p className="text-xs font-medium mt-1">{topMvp ? topMvp.name : '—'}</p>
-              <p className="display text-lg gold-text">{topMvp ? fmt(topMvp.mvp.total, 1) : '—'}</p>
-            </div>
-          </div>
-        </Card>
-      )}
+      {champion && <ChampionsShowcase data={data} champion={champion} />}
 
       {!champion && (
         <Card className="text-center py-6">
@@ -95,7 +72,7 @@ export function Home({ data, persist, isAdmin, setTab }) {
         </Card>
       )}
 
-      {leaders.some((l) => l.p) && (
+      {!champion && leaders.some((l) => l.p) && (
         <div>
           <p className="text-[10px] uppercase tracking-[0.2em] mb-2" style={{ color: 'var(--muted)' }}>Tournament Leaders</p>
           <div className="grid grid-cols-2 gap-2">
@@ -122,44 +99,46 @@ export function Home({ data, persist, isAdmin, setTab }) {
         </div>
       )}
 
-      <div>
-        <div className="flex items-center justify-between mb-2">
-          <SectionTitle icon={CalendarDays}>Next Slot</SectionTitle>
-          <button onClick={() => setTab('schedule')} className="text-xs" style={{ color: 'var(--gold)' }}>View schedule →</button>
+      {!champion && (
+        <div>
+          <div className="flex items-center justify-between mb-2">
+            <SectionTitle icon={CalendarDays}>Next Slot</SectionTitle>
+            <button onClick={() => setTab('schedule')} className="text-xs" style={{ color: 'var(--gold)' }}>View schedule →</button>
+          </div>
+          {upcoming ? (
+            <>
+              <Card>
+                <div className="flex items-center justify-between mb-3">
+                  <p className="text-sm font-semibold">{upcoming.date ? new Date(upcoming.date + 'T00:00').toDateString() : 'Date TBD'}</p>
+                  {upcoming.date && <Countdown dateStr={upcoming.date} />}
+                </div>
+                <div className="space-y-3">
+                  {activeTeamIds(upcoming).map((id) => {
+                    const team = teamById(id)
+                    const teamPlayers = players.filter((p) => p.team && p.team.id === id)
+                    const key = [...sortMvp(teamPlayers.filter((p) => p.mvp)), ...sortBatting(teamPlayers.filter((p) => !p.mvp && p.batting))].slice(0, 2)
+                    return (
+                      <div key={id}>
+                        <TeamPill team={team} />
+                        {key.length > 0 && (
+                          <p className="text-[11px] mt-1 ml-1" style={{ color: 'var(--muted2)' }}>
+                            Key players: {key.map((p) => p.name).join(', ')}
+                          </p>
+                        )}
+                      </div>
+                    )
+                  })}
+                </div>
+              </Card>
+              <div className="mt-3">
+                <SlotFavorite data={data} slot={upcoming} key={upcoming.id} />
+              </div>
+            </>
+          ) : (
+            <Empty title="No upcoming slots" body="Add a slot from the Schedule tab." />
+          )}
         </div>
-        {upcoming ? (
-          <>
-            <Card>
-              <div className="flex items-center justify-between mb-3">
-                <p className="text-sm font-semibold">{upcoming.date ? new Date(upcoming.date + 'T00:00').toDateString() : 'Date TBD'}</p>
-                {upcoming.date && <Countdown dateStr={upcoming.date} />}
-              </div>
-              <div className="space-y-3">
-                {activeTeamIds(upcoming).map((id) => {
-                  const team = teamById(id)
-                  const teamPlayers = players.filter((p) => p.team && p.team.id === id)
-                  const key = [...sortMvp(teamPlayers.filter((p) => p.mvp)), ...sortBatting(teamPlayers.filter((p) => !p.mvp && p.batting))].slice(0, 2)
-                  return (
-                    <div key={id}>
-                      <TeamPill team={team} />
-                      {key.length > 0 && (
-                        <p className="text-[11px] mt-1 ml-1" style={{ color: 'var(--muted2)' }}>
-                          Key players: {key.map((p) => p.name).join(', ')}
-                        </p>
-                      )}
-                    </div>
-                  )
-                })}
-              </div>
-            </Card>
-            <div className="mt-3">
-              <SlotFavorite data={data} slot={upcoming} key={upcoming.id} />
-            </div>
-          </>
-        ) : (
-          <Empty title="No upcoming slots" body="Add a slot from the Schedule tab." />
-        )}
-      </div>
+      )}
 
       <div>
         <div className="flex items-center justify-between mb-2">

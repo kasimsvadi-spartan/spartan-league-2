@@ -1,7 +1,8 @@
 import { useState } from 'react'
 import { ChevronDown, ChevronUp, IndianRupee, Plus, Trash2, Trophy, Users } from 'lucide-react'
 import { uid } from '../../../lib/uid'
-import { CATEGORY_LETTERS, findPoolPhoto, normName } from '../../../lib/players'
+import { computeEarnings, inr } from '../../../lib/rewards'
+import { CATEGORY_LETTERS, findPoolPhoto } from '../../../lib/players'
 import { Card } from '../../layout/Card'
 import { SectionTitle } from '../../layout/SectionTitle'
 import { Empty } from '../../layout/Empty'
@@ -30,10 +31,6 @@ const CATEGORIES = {
   ],
 }
 const ALL_CATEGORIES = { ...Object.fromEntries(CATEGORIES.slot.map((c) => [c.key, c])), ...Object.fromEntries(CATEGORIES.tournament.map((c) => [c.key, c])) }
-
-function inr(n) {
-  return '₹' + Number(n || 0).toLocaleString('en-IN')
-}
 
 export function Rewards({ data, persist, isAdmin }) {
   const entries = data.rewardEntries || []
@@ -137,18 +134,7 @@ export function Rewards({ data, persist, isAdmin }) {
     })
   })()
 
-  const earnings = (() => {
-    const byName = new Map()
-    entries.forEach((e) => {
-      const key = normName(e.recipientName)
-      if (!key) return
-      const cur = byName.get(key) || { name: e.recipientName, team: e.team, total: 0 }
-      cur.total += e.amount
-      if (!cur.team && e.team) cur.team = e.team
-      byName.set(key, cur)
-    })
-    return [...byName.values()].sort((a, b) => b.total - a.total)
-  })()
+  const earnings = computeEarnings(entries)
 
   return (
     <div className="space-y-6">
