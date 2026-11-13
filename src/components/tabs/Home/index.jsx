@@ -1,11 +1,12 @@
-import { CalendarDays, Flame, ListOrdered, Medal, Trophy } from 'lucide-react'
+import { CalendarDays, Flame, Hand, ListOrdered, Medal, Star, Trophy } from 'lucide-react'
 import { activeTeamIds, computeChampion, computePointsTable, MATCH_LABELS } from '../../../lib/scoring'
-import { buildPlayerIndex, sortBatting, sortBowling, sortMvp } from '../../../lib/stats'
-import { fmt } from '../../../lib/players'
+import { buildPlayerIndex, sortBatting, sortBowling, sortFielding, sortMvp } from '../../../lib/stats'
+import { findPoolPhoto, fmt, normName } from '../../../lib/players'
 import { Card } from '../../layout/Card'
 import { SectionTitle } from '../../layout/SectionTitle'
 import { Empty } from '../../layout/Empty'
 import { TeamLogo } from '../../shared/TeamLogo'
+import { PlayerAvatar } from '../../shared/PlayerAvatar'
 import { TeamPill } from '../../shared/TeamPill'
 import { Announcements } from './Announcements'
 import { Countdown } from './Countdown'
@@ -31,10 +32,17 @@ export function Home({ data, persist, isAdmin, setTab }) {
   const topWickets = sortBowling(players.filter((p) => p.bowling))[0]
   const champion = computeChampion(data)
 
-  const imports = data.statsImports || []
-  const latestImport = imports.length ? [...imports].sort((a, b) => (b.importedAt || '').localeCompare(a.importedAt || ''))[0] : null
-  const spotlightBat = latestImport && latestImport.batting.length ? [...latestImport.batting].sort((a, b) => (b.total_runs ?? -Infinity) - (a.total_runs ?? -Infinity))[0] : null
-  const spotlightBowl = latestImport && latestImport.bowling.length ? [...latestImport.bowling].sort((a, b) => (b.total_wickets ?? -Infinity) - (a.total_wickets ?? -Infinity))[0] : null
+  const leaderPhoto = (p) => {
+    const sq = p.team ? p.team.players.find((sp) => normName(sp.name) === normName(p.name)) : null
+    return (sq && sq.photoUrl) || findPoolPhoto(data.playerPool, p.name)
+  }
+  const topFielder = sortFielding(players.filter((p) => p.fielding))[0]
+  const leaders = [
+    { label: 'Top Batsman', icon: Flame, p: topRuns, value: topRuns && topRuns.batting.total_runs, unit: 'runs' },
+    { label: 'Top Bowler', icon: Medal, p: topWickets, value: topWickets && topWickets.bowling.total_wickets, unit: 'wkts' },
+    { label: 'Top Fielder', icon: Hand, p: topFielder, value: topFielder && topFielder.fielding.total_dismissal, unit: 'dismissals' },
+    { label: 'MVP', icon: Star, p: topMvp, value: topMvp && fmt(topMvp.mvp.total, 1), unit: 'pts' },
+  ]
 
   return (
     <div className="space-y-4">
@@ -87,35 +95,29 @@ export function Home({ data, persist, isAdmin, setTab }) {
         </Card>
       )}
 
-      {topMvp && (
-        <Card className="flex items-center justify-between">
-          <div>
-            <p className="text-[10px] uppercase tracking-[0.2em]" style={{ color: 'var(--muted)' }}>Top MVP</p>
-            <p className="display text-lg mt-0.5">{topMvp.name}</p>
-            {topMvp.team && <TeamPill team={topMvp.team} />}
-          </div>
-          <div className="display text-2xl gold-text">{fmt(topMvp.mvp.total, 1)}</div>
-        </Card>
-      )}
-
-      {latestImport && (spotlightBat || spotlightBowl) && (
+      {leaders.some((l) => l.p) && (
         <div>
-          <p className="text-[10px] uppercase tracking-[0.2em] mb-2" style={{ color: 'var(--muted)' }}>Spotlight · {latestImport.label}</p>
+          <p className="text-[10px] uppercase tracking-[0.2em] mb-2" style={{ color: 'var(--muted)' }}>Tournament Leaders</p>
           <div className="grid grid-cols-2 gap-2">
-            {spotlightBat && (
-              <Card>
-                <p className="text-[10px] uppercase tracking-wide flex items-center gap-1" style={{ color: 'var(--muted)' }}><Flame size={10} color="var(--gold)" /> Top Bat</p>
-                <p className="text-sm font-medium mt-1">{spotlightBat.name}</p>
-                <p className="display text-xl gold-text">{spotlightBat.total_runs}</p>
+            {leaders.map(({ label, icon: Icon, p, value, unit }) => (
+              <Card key={label}>
+                <p className="text-[10px] uppercase tracking-wide flex items-center gap-1" style={{ color: 'var(--muted)' }}><Icon size={10} color="var(--gold)" /> {label}</p>
+                {p ? (
+                  <>
+                    <div className="flex items-center gap-2 mt-2">
+                      <PlayerAvatar player={{ name: p.name, photoUrl: leaderPhoto(p) }} team={p.team} size={36} />
+                      <div className="min-w-0">
+                        <p className="text-sm font-medium truncate">{p.name}</p>
+                        {p.team && <p className="text-[10px] truncate" style={{ color: p.team.color }}>{p.team.name}</p>}
+                      </div>
+                    </div>
+                    <p className="display text-2xl gold-text mt-2">{value} <span className="text-[10px]" style={{ color: 'var(--muted2)' }}>{unit}</span></p>
+                  </>
+                ) : (
+                  <p className="text-sm mt-2" style={{ color: 'var(--muted2)' }}>—</p>
+                )}
               </Card>
-            )}
-            {spotlightBowl && (
-              <Card>
-                <p className="text-[10px] uppercase tracking-wide flex items-center gap-1" style={{ color: 'var(--muted)' }}><Medal size={10} color="var(--gold)" /> Top Bowl</p>
-                <p className="text-sm font-medium mt-1">{spotlightBowl.name}</p>
-                <p className="display text-xl gold-text">{spotlightBowl.total_wickets} wkts</p>
-              </Card>
-            )}
+            ))}
           </div>
         </div>
       )}
